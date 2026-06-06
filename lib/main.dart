@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:gspr/LoginScreen.dart'; // Import da sua tela de login
-import 'HomeScreen.dart';
+//import 'package:gspr/LoginScreen.dart';
+//import 'HomeScreen.dart';
 import 'package:firebase_core/firebase_core.dart';
-
+import 'telateste.dart'; // Import da tela de teste
 import 'firebase_options.dart';
 
 
@@ -24,7 +24,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       // Basta trocar HomeScreen() por LoginScreen() aqui:
-      home: const LoginScreen(), 
+      home: const WidgetTestScreen(), 
     );
   }
 }

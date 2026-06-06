@@ -1,0 +1,132 @@
+========================================================
+  GSPR - GERENCIADOR DE SUINOCULTURA
+  Controle de progresso do desenvolvimento
+  Última atualização: 06/06/2026
+========================================================
+
+================================================================
+  INFRAESTRUTURA / BASE
+================================================================
+
+[OK] Firebase inicializado (firebase_options.dart)
+[OK] Firestore habilitado no console (coleção "usuarios" existente)
+[OK] Dependências: firebase_core, cloud_firestore, intl, table_calendar, google_fonts, flutter_svg
+[OK] BaseScreen (screen_base.dart) — cabeçalho verde com logo e título
+[OK] PrimaryButton (assets/widgets/primary__button.dart) — botão verde reutilizável
+[OK] CustomFloatingNavBar (assets/widgets/itens/navbar.dart) — navbar flutuante com 5 ícones
+[OK] AnimalModel (models/animal_model.dart) — model com regra dos 7 meses para cobertura
+[OK] AnimalService (services/animal_service.dart) — salvar, listar, listarPorSexo, excluir no Firestore
+
+
+================================================================
+  TELAS
+================================================================
+
+[OK] LoginScreen.dart
+     - UI completa (email, senha, botão Google)
+     - FALTA: lógica de autenticação Firebase Auth
+
+[OK] CadastroScreen.dart
+     - Toggle Macho / Fêmea
+     - Campos: código, data nascimento, peso, raça, produtividade, observações
+     - Validação de campos obrigatórios
+     - Salvamento no Firestore (/animais)
+     - FALTA: conectar na navegação do app
+
+[PENDENTE] HomeScreen.dart
+     - Apenas esqueleto com texto placeholder
+     - FALTA: exibir ResumoWidget com dados reais do Firestore
+     - FALTA: conectar navegação da navbar
+
+[PENDENTE] ListaAnimaisScreen
+     - Listagem de todos os animais cadastrados
+     - Filtro por Macho / Fêmea
+     - Acesso ao detalhe de cada animal
+     - Ícone na navbar: Pets (porco)
+
+[PENDENTE] DetalheAnimalScreen
+     - Exibir todos os dados do animal
+     - Botão editar / excluir
+     - Se fêmea com 7+ meses: botão para registrar reprodução
+     - Se macho com 7+ meses: exibir nº de coberturas e taxa de fertilidade
+
+[PENDENTE] ReproducaoScreen (somente fêmeas com 7+ meses)
+     - Campos: macho utilizado, período de cobertura, gestação,
+               total de filhotes, mortalidade dos filhotes, desmame
+     - Salva em /animais/{femea_id}/reproducoes/{id}
+
+[PENDENTE] RelatoriosScreen
+     - Exportar / visualizar dados do rebanho
+     - Ícone na navbar: documento
+
+[PENDENTE] EstatisticasScreen
+     - Gráficos: evolução do rebanho, peso médio, taxa de fertilidade
+     - Ícone na navbar: gráfico de barras
+
+[PENDENTE] ConfiguracoesScreen
+     - Configurações do app / perfil do usuário
+     - Ícone na navbar: engrenagem
+
+
+================================================================
+  WIDGETS
+================================================================
+
+[OK]  ResumoWidget — card com gradiente verde (dados estáticos por enquanto)
+[OK]  CustomFloatingNavBar — navbar flutuante 5 ícones
+[STUB] EventosProximosWidget — placeholder, implementação pendente
+
+
+================================================================
+  NAVEGAÇÃO
+================================================================
+
+[PENDENTE] Fluxo Login → Home
+[PENDENTE] NavBar conectada às telas reais
+[PENDENTE] Home com botão/ação para abrir CadastroScreen
+
+
+================================================================
+  FIRESTORE — ESTRUTURA DE DADOS
+================================================================
+
+/animais/{animalId}
+  - codigo:          string
+  - sexo:            "macho" | "femea"
+  - dataNascimento:  Timestamp
+  - peso:            number (kg)
+  - raca:            string
+  - produtividade:   string (texto livre)
+  - saude:           string (observações)
+  - criadoEm:        Timestamp
+
+/animais/{femea_id}/reproducoes/{reproducaoId}
+  - machoUtilizadoId:     string (ref ao id do macho)
+  - periodoCobertura:     Timestamp
+  - gestacao:             number (dias, padrão ~114)
+  - totalFilhotes:        number
+  - mortalidadeFilhotes:  number
+  - desmame:              Timestamp
+  - criadoEm:             Timestamp
+
+/usuarios/{userId}   ← já existia antes
+
+
+================================================================
+  REGRAS DE NEGÓCIO IMPLEMENTADAS
+================================================================
+
+- Animal com menos de 7 meses (< 210 dias) NÃO pode ter cobertura
+- Estatísticas do macho (nº coberturas, taxa fertilidade) são
+  calculadas por query nas reproduções, não salvas como campo fixo
+- Data de nascimento é salva como Timestamp; idade calculada no app
+
+
+================================================================
+  LEGENDA
+================================================================
+
+[OK]       — Concluído e funcional
+[PENDENTE] — Ainda não iniciado
+[STUB]     — Criado como placeholder, implementação futura
+[FALTA]    — Parte de uma tela já criada que ainda precisa ser feita

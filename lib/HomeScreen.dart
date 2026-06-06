@@ -8,9 +8,21 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BaseScreen(
       title: 'GSPR',
-      child: Center(
+      child: const Center(
         child: Text('Tela inicial do sistema'),
       ),
+    );
+  }
+}
+
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BaseScreen(
+      title: 'Perfil',
+      child: const Text('Perfil do usuário'),
     );
   }
 }

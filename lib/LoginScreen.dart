@@ -101,7 +101,7 @@ class LoginScreen extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: () {},
                 icon: Image.asset(
-                  'assets/google.png',
+                  'assets/itens/google.png', /// tu vai precisar colocar imagem aqui
                   height: 24,
                 ),
                 label: const Text(
