@@ -30,4 +30,5 @@ flutter:
   uses-material-design: true
 
   assets:
-    #- assets/google.png
+    - lib/assets/widgets/itens/logo.png
+    - lib/assets/widgets/itens/google.png

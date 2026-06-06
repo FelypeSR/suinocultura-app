@@ -24,7 +24,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       // Basta trocar HomeScreen() por LoginScreen() aqui:
-      home: const WidgetTestScreen(), 
+      home: const WidgetTestScreen(),
     );
   }
 }

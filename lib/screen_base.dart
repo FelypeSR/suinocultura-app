@@ -68,7 +68,7 @@ class BaseScreen extends StatelessWidget {
                       height: 80,
                       width: 80,
                       child: Image.asset(
-                        'assets/logo_porco.png', // Mude para o caminho real da sua imagem
+                        'lib/assets/widgets/itens/logo.png',
                         fit: BoxFit.contain,
                       ),
                     ),
