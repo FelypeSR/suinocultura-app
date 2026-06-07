@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:gspr/screen_base.dart';
 import 'assets/widgets/primary__button.dart';
 import 'HomeScreen.dart';
+import 'RecoverScreen.dart';
 
 // StatefulWidget porque precisamos controlar o estado de carregamento
 // enquanto o login com o Google está em andamento.
@@ -129,7 +130,11 @@ class _LoginScreenState extends State<LoginScreen> {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const RecoverScreen()),
+                  );
+                },
                 child: const Text(
                   'Esqueceu a senha?',
                   style: TextStyle(

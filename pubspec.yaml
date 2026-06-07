@@ -34,3 +34,4 @@ flutter:
   assets:
     - lib/assets/widgets/itens/logo.png
     - lib/assets/widgets/itens/google.png
+    - lib/assets/widgets/itens/recover.png
