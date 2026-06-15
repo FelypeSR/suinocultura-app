@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-//import 'package:gspr/LoginScreen.dart';
-//import 'HomeScreen.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'telateste.dart'; // Import da tela de teste
+import 'routes.dart'; // Rotas nomeadas centralizadas
+import 'auth_gate.dart'; // Decide entre login e home
 import 'firebase_options.dart';
 
 
@@ -23,8 +23,17 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      // Basta trocar HomeScreen() por LoginScreen() aqui:
-      home: const WidgetTestScreen(),
+      // Traduções dos widgets do Material/Cupertino (date picker, etc.)
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('pt', 'BR')],
+      locale: const Locale('pt', 'BR'),
+      // AuthGate mostra login ou home conforme o usuário está autenticado.
+      home: const AuthGate(),
+      routes: Rotas.mapa,
     );
   }
 }
