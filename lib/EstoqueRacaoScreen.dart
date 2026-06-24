@@ -74,7 +74,7 @@ class EstoqueRacaoScreen extends StatelessWidget {
                 child: racoes.isEmpty
                     ? const Center(
                         child: Text(
-                          'Nenhuma ração em estoque.\nToque em "Nova entrada".',
+                          'Sem estoque registrado',
                           textAlign: TextAlign.center,
                           style: TextStyle(color: Colors.black45),
                         ),
@@ -194,11 +194,23 @@ class _CardRacao extends StatelessWidget {
 
   const _CardRacao({required this.racao, required this.onExcluir});
 
+  static const _rotulosClasse = {
+    'todos': 'Todos',
+    'femeas': 'Fêmeas',
+    'machos': 'Machos',
+    'filhotes': 'Filhotes',
+  };
+
+  String _fmt(double v) => v == v.roundToDouble()
+      ? v.toInt().toString()
+      : v.toStringAsFixed(1);
+
   @override
   Widget build(BuildContext context) {
-    final qtd = racao.quantidade == racao.quantidade.roundToDouble()
-        ? racao.quantidade.toInt().toString()
-        : racao.quantidade.toString();
+    final saldo = _fmt(racao.saldoAtual);
+    final dias = racao.diasRestantes;
+    final acabando = dias != null && dias <= 3;
+    final classe = _rotulosClasse[racao.classe] ?? racao.classe;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -229,21 +241,54 @@ class _CardRacao extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  racao.tipo,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        racao.tipo,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5E9),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        classe,
+                        style: const TextStyle(
+                            fontSize: 11, color: _verde),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '$qtd ${racao.unidade}'
+                  '$saldo ${racao.unidade} em estoque'
                   '${racao.fornecedor.isNotEmpty ? ' • ${racao.fornecedor}' : ''}',
                   style: const TextStyle(
                       fontSize: 13, color: Colors.black54),
                 ),
+                if (dias != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    acabando
+                        ? '⚠ Acaba em $dias dia(s)'
+                        : 'Dura ~$dias dia(s) • ${_fmt(racao.consumoPorDia)} ${racao.unidade}/dia',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight:
+                          acabando ? FontWeight.bold : FontWeight.normal,
+                      color: acabando ? Colors.red : Colors.black45,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 2),
                 Text(
                   _moeda.format(racao.custo),
@@ -280,11 +325,15 @@ class _CadastroRacaoScreenState extends State<CadastroRacaoScreen> {
 
   String? _tipo;
   String _unidade = 'kg';
+  String _classe = 'todos';
+  String _modoConsumo = 'manual';
   bool _salvando = false;
 
   final _quantidadeCtrl = TextEditingController();
   final _fornecedorCtrl = TextEditingController();
   final _custoCtrl = TextEditingController();
+  final _consumoCtrl = TextEditingController();
+  final _observacaoCtrl = TextEditingController();
 
   static const _tipos = [
     'Inicial',
@@ -294,11 +343,21 @@ class _CadastroRacaoScreenState extends State<CadastroRacaoScreen> {
     'Lactação',
   ];
 
+  // Classes de animais que consomem a ração.
+  static const _classes = {
+    'todos': 'Todos',
+    'femeas': 'Fêmeas',
+    'machos': 'Machos',
+    'filhotes': 'Filhotes',
+  };
+
   @override
   void dispose() {
     _quantidadeCtrl.dispose();
     _fornecedorCtrl.dispose();
     _custoCtrl.dispose();
+    _consumoCtrl.dispose();
+    _observacaoCtrl.dispose();
     super.dispose();
   }
 
@@ -338,14 +397,26 @@ class _CadastroRacaoScreenState extends State<CadastroRacaoScreen> {
       return;
     }
 
+    final automatico = _modoConsumo == 'automatico';
+    if (automatico && _parseNum(_consumoCtrl.text) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe o consumo por dia')),
+      );
+      return;
+    }
+
     setState(() => _salvando = true);
     try {
       final racao = RacaoModel(
         tipo: _tipo!,
+        classe: _classe,
         quantidade: _parseNum(_quantidadeCtrl.text)!,
         unidade: _unidade,
         fornecedor: _fornecedorCtrl.text.trim(),
         custo: _parseNum(_custoCtrl.text)!,
+        observacao: _observacaoCtrl.text.trim(),
+        modoConsumo: _modoConsumo,
+        consumoPorDia: automatico ? _parseNum(_consumoCtrl.text)! : 0,
       );
       await _service.salvar(racao);
       if (mounted) {
@@ -412,6 +483,25 @@ class _CadastroRacaoScreenState extends State<CadastroRacaoScreen> {
               ),
               const SizedBox(height: 16),
 
+              // Classe de animal
+              const Text(
+                'Classe',
+                style: TextStyle(fontSize: 14, color: Colors.black54),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _classes.entries
+                    .map((e) => _ChipClasse(
+                          label: e.value,
+                          selecionado: _classe == e.key,
+                          onTap: () => setState(() => _classe = e.key),
+                        ))
+                    .toList(),
+              ),
+              const SizedBox(height: 16),
+
               // Quantidade + unidade
               Row(
                 children: [
@@ -462,6 +552,93 @@ class _CadastroRacaoScreenState extends State<CadastroRacaoScreen> {
                   if (_parseNum(v) == null) return 'Inválido';
                   return null;
                 },
+              ),
+              const SizedBox(height: 16),
+
+              // Consumo por dia: manual ou automático
+              const Text(
+                'Consumo por dia',
+                style: TextStyle(fontSize: 14, color: Colors.black54),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.black26),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _modoConsumo,
+                    isExpanded: true,
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'manual',
+                        child: Text('Manual'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'automatico',
+                        child: Text('Automático'),
+                      ),
+                    ],
+                    onChanged: (v) =>
+                        setState(() => _modoConsumo = v ?? 'manual'),
+                  ),
+                ),
+              ),
+              // No modo automático, desconta a quantidade abaixo todo dia.
+              if (_modoConsumo == 'automatico') ...[
+                const SizedBox(height: 12),
+                _Campo(
+                  controller: _consumoCtrl,
+                  hint: 'consumo por dia (kg)',
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Informe o consumo por dia';
+                    }
+                    if (_parseNum(v) == null) return 'Inválido';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'O estoque é descontado automaticamente a cada dia.',
+                  style: TextStyle(fontSize: 12, color: Colors.black45),
+                ),
+              ],
+              const SizedBox(height: 16),
+
+              // Observação
+              const Text(
+                'Observação',
+                style: TextStyle(fontSize: 14, color: Colors.black54),
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _observacaoCtrl,
+                maxLines: 3,
+                style: const TextStyle(fontStyle: FontStyle.italic),
+                decoration: InputDecoration(
+                  hintText: 'anotações...',
+                  hintStyle: const TextStyle(
+                    fontStyle: FontStyle.italic,
+                    color: Colors.black38,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.all(16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.black26),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.black26),
+                  ),
+                ),
               ),
               const SizedBox(height: 32),
 
@@ -539,6 +716,42 @@ class _SeletorUnidade extends StatelessWidget {
               fontWeight: selecionado ? FontWeight.bold : FontWeight.normal,
               color: selecionado ? Colors.white : Colors.black54,
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Chip selecionável de classe de animal (Todos / Fêmeas / Machos / Filhotes).
+class _ChipClasse extends StatelessWidget {
+  final String label;
+  final bool selecionado;
+  final VoidCallback onTap;
+
+  const _ChipClasse({
+    required this.label,
+    required this.selecionado,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: selecionado ? _verde : Colors.grey[200],
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: selecionado ? FontWeight.bold : FontWeight.normal,
+            color: selecionado ? Colors.white : Colors.black54,
           ),
         ),
       ),

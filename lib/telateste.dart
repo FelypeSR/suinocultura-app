@@ -4,6 +4,11 @@ import 'package:gspr/assets/widgets/itens/navbar.dart'; // NavBar
 import 'package:gspr/assets/widgets/itens/evento_proximo.dart'; // Card de evento
 import 'package:gspr/assets/widgets/itens/resumo_de_eventos.dart'; // Carrossel de resumo
 import 'package:gspr/routes.dart'; // Rotas nomeadas
+import 'package:gspr/models/racao_model.dart';
+import 'package:gspr/services/racao_service.dart';
+import 'package:gspr/models/animal_model.dart';
+import 'package:gspr/services/animal_service.dart';
+import 'package:gspr/assets/widgets/hide_bar.dart'; // Painel lateral
 
 /// Tela inicial do app (home): cabeçalho com saudação, busca,
 /// eventos próximos e o carrossel de resumo. Abaixo, a navbar flutuante.
@@ -17,23 +22,43 @@ class WidgetTestScreen extends StatefulWidget {
 class _WidgetTestScreenState extends State<WidgetTestScreen> {
   int _currentIndex = 0;
 
+  // Streams das anotações exibidas no carrossel (estoque + animais).
+  final _racoes = RacaoService().listar();
+  final _animais = AnimalService().listar();
+
+  // Controla a abertura do painel lateral (HideBar) a partir do header.
+  final _hideBarKey = GlobalKey<HideBarState>();
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      extendBody: true, // navbar flutua sobre o conteúdo
-      body: Column(
-        children: [
-          const _HomeHeader(),
+    final user = FirebaseAuth.instance.currentUser;
+
+    return HideBar(
+      key: _hideBarKey,
+      showTrigger: false, // usamos o botão de 3 pontinhos do header
+      userEmail: user?.email ?? '',
+      photoUrl: user?.photoURL,
+      onLogout: () => FirebaseAuth.instance.signOut(),
+      onEditarPerfil: () {},
+      onAtividades: () {},
+      onConfiguracoes: () {},
+      onGerenciarDados: () {},
+      onExportarDados: () {},
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        extendBody: true, // navbar flutua sobre o conteúdo
+        body: Column(
+          children: [
+            _HomeHeader(onMenu: () => _hideBarKey.currentState?.open()),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 110),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Barra de pesquisa
                   _BarraPesquisa(),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 28),
 
                   // Dois cards de eventos próximos lado a lado
                   Row(
@@ -59,20 +84,54 @@ class _WidgetTestScreenState extends State<WidgetTestScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Carrossel de resumo (Estoque / Leitões / Cobertura)
-                  const ResumodeEventos(
-                    estoqueKg: 80,
-                    rebanho: 140,
-                    leitoes: 45,
-                    dataRegistro: '40/10',
-                    percentualRacao: 0.88,
-                    nascimentos: 12,
-                    desmames: 8,
-                    mortalidade: 2,
-                    emCobertura: 5,
-                    gestantes: 7,
-                    emAleitamento: 3,
+                  // Carrossel de resumo — preenche o espaço restante até a navbar
+                  Expanded(
+                    child: StreamBuilder<List<RacaoModel>>(
+                      stream: _racoes,
+                      builder: (context, racaoSnap) {
+                        return StreamBuilder<List<AnimalModel>>(
+                          stream: _animais,
+                          builder: (context, animalSnap) {
+                            final anotacoes = <Anotacao>[];
+                            for (final r
+                                in racaoSnap.data ?? const <RacaoModel>[]) {
+                              if (r.observacao.trim().isNotEmpty) {
+                                anotacoes.add(Anotacao(
+                                  origem: 'Estoque • ${r.tipo}',
+                                  texto: r.observacao.trim(),
+                                ));
+                              }
+                            }
+                            for (final a
+                                in animalSnap.data ?? const <AnimalModel>[]) {
+                              if (a.saude.trim().isNotEmpty) {
+                                anotacoes.add(Anotacao(
+                                  origem: 'Animal ${a.codigo}',
+                                  texto: a.saude.trim(),
+                                ));
+                              }
+                            }
+                            return ResumodeEventos(
+                              estoqueKg: 80,
+                              rebanho: 140,
+                              leitoes: 45,
+                              dataRegistro: '40/10',
+                              percentualRacao: 0.88,
+                              nascimentos: 12,
+                              desmames: 8,
+                              mortalidade: 2,
+                              emCobertura: 5,
+                              gestantes: 7,
+                              emAleitamento: 3,
+                              anotacoes: anotacoes,
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
+                  // Espaço para a navbar flutuante não cobrir os dots
+                  const SizedBox(height: 80),
                 ],
               ),
             ),
@@ -97,13 +156,16 @@ class _WidgetTestScreenState extends State<WidgetTestScreen> {
           });
         },
       ),
+      ),
     );
   }
 }
 
 /// Cabeçalho verde com foto de perfil, saudação e o porquinho.
 class _HomeHeader extends StatelessWidget {
-  const _HomeHeader();
+  final VoidCallback onMenu;
+
+  const _HomeHeader({required this.onMenu});
 
   /// Nome a exibir: usa o displayName (contas Google), senão o trecho do
   /// email antes do @, senão um fallback genérico.
@@ -148,20 +210,22 @@ class _HomeHeader extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          child: Row(
+          padding: const EdgeInsets.fromLTRB(20, 28, 20, 56),
+          child: Stack(
+            children: [
+              Row(
             children: [
               // Foto de perfil
               CircleAvatar(
-                radius: 28,
+                radius: 42,
                 backgroundColor: Colors.white,
                 backgroundImage: foto != null ? NetworkImage(foto) : null,
                 child: foto == null
                     ? const Icon(Icons.person,
-                        color: Color(0xFF3BA135), size: 30)
+                        color: Color(0xFF3BA135), size: 46)
                     : null,
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 16),
               // Saudação
               Expanded(
                 child: Column(
@@ -172,25 +236,46 @@ class _HomeHeader extends StatelessWidget {
                       'Olá $nome!',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 18,
+                        fontSize: 27,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     const Text(
                       'o que vamos fazer hoje?',
-                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
                     ),
                   ],
                 ),
               ),
-              // Porquinho
-              SizedBox(
-                height: 64,
-                width: 64,
-                child: Image.asset(
-                  'lib/assets/widgets/itens/logo.png',
-                  fit: BoxFit.contain,
+              // Porquinho (deslocado para baixo, próximo à base do header)
+              Transform.translate(
+                offset: const Offset(0, 24),
+                child: SizedBox(
+                  height: 96,
+                  width: 96,
+                  child: Image.asset(
+                    'lib/assets/widgets/itens/logo.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ],
+              ),
+              // Botão de 3 pontinhos que abre o painel lateral (HideBar)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: GestureDetector(
+                  onTap: onMenu,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    child: const Icon(
+                      Icons.more_vert,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -213,9 +298,10 @@ class _BarraPesquisa extends StatelessWidget {
           color: Colors.black38,
         ),
         prefixIcon: const Icon(Icons.search, color: Colors.black45),
+        isDense: true,
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(vertical: 6),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Colors.black26),

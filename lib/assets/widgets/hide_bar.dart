@@ -15,6 +15,10 @@ class HideBar extends StatefulWidget {
   final VoidCallback? onGerenciarDados;
   final VoidCallback? onExportarDados;
 
+  // Quando false, o botão (⋮) interno não é exibido — útil quando a tela já
+  // tem seu próprio gatilho e abre o painel via GlobalKey<HideBarState>.open().
+  final bool showTrigger;
+
   const HideBar({
     super.key,
     required this.child,
@@ -26,15 +30,16 @@ class HideBar extends StatefulWidget {
     this.onConfiguracoes,
     this.onGerenciarDados,
     this.onExportarDados,
+    this.showTrigger = true,
   });
 
   @override
-  State<HideBar> createState() => _HideBarState();
+  State<HideBar> createState() => HideBarState();
 }
 
 // SingleTickerProviderStateMixin é necessário para o AnimationController
 // que controla a animação de deslizamento do painel.
-class _HideBarState extends State<HideBar> with SingleTickerProviderStateMixin {
+class HideBarState extends State<HideBar> with SingleTickerProviderStateMixin {
   bool _isOpen = false;
   late AnimationController _controller;
   late Animation<Offset> _slideAnimation;
@@ -66,6 +71,9 @@ class _HideBarState extends State<HideBar> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
+  /// Abre o painel a partir de fora (via `GlobalKey<HideBarState>().open()`).
+  void open() => _open();
+
   void _open() {
     setState(() => _isOpen = true);
     _controller.forward(); // executa a animação de entrada
@@ -95,7 +103,7 @@ class _HideBarState extends State<HideBar> with SingleTickerProviderStateMixin {
         if (_isOpen)
           GestureDetector(
             onTap: _close,
-            child: Container(color: Colors.black.withOpacity(0.35)),
+            child: Container(color: Colors.black.withValues(alpha: 0.35)),
           ),
 
         // Painel lateral animado — desliza da esquerda
@@ -109,7 +117,7 @@ class _HideBarState extends State<HideBar> with SingleTickerProviderStateMixin {
 
         // Botão (⋮) que abre o painel, posicionado sobre o cabeçalho verde.
         // Fica oculto enquanto o painel está aberto.
-        if (!_isOpen)
+        if (!_isOpen && widget.showTrigger)
           Positioned(
             top: topPadding + 55, // alinha visualmente com o título do AppBar
             left: 16,
@@ -119,7 +127,7 @@ class _HideBarState extends State<HideBar> with SingleTickerProviderStateMixin {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.22),
+                  color: Colors.white.withValues(alpha: 0.22),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -136,7 +144,9 @@ class _HideBarState extends State<HideBar> with SingleTickerProviderStateMixin {
 
   // Constrói o conteúdo do painel lateral
   Widget _buildPanel(BuildContext context) {
-    return Container(
+    return Material(
+      type: MaterialType.transparency,
+      child: Container(
       width: MediaQuery.of(context).size.width * _panelWidthFactor,
       height: double.infinity,
       decoration: const BoxDecoration(
@@ -224,6 +234,7 @@ class _HideBarState extends State<HideBar> with SingleTickerProviderStateMixin {
             ],
           ),
         ),
+      ),
       ),
     );
   }

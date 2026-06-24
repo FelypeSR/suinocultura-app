@@ -1,5 +1,14 @@
 import 'package:flutter/material.dart';
 
+/// Uma anotação exibida no carrossel, com a origem (de onde a informação veio,
+/// ex.: "Estoque • Inicial", "Animal 123") e o texto da observação.
+class Anotacao {
+  final String origem;
+  final String texto;
+
+  const Anotacao({required this.origem, required this.texto});
+}
+
 class ResumodeEventos extends StatefulWidget {
   // --- Estoque / Ração ---
   final double estoqueKg;
@@ -18,6 +27,9 @@ class ResumodeEventos extends StatefulWidget {
   final int gestantes;
   final int emAleitamento;
 
+  // --- Anotações ---
+  final List<Anotacao> anotacoes;
+
   const ResumodeEventos({
     super.key,
     this.estoqueKg = 0,
@@ -31,6 +43,7 @@ class ResumodeEventos extends StatefulWidget {
     this.emCobertura = 0,
     this.gestantes = 0,
     this.emAleitamento = 0,
+    this.anotacoes = const [],
   });
 
   @override
@@ -64,10 +77,8 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisSize: MainAxisSize.min,
       children: [
-        SizedBox(
-          height: 180,
+        Expanded(
           child: PageView(
             controller: _controller,
             onPageChanged: (i) => setState(() => _currentPage = i),
@@ -75,11 +86,12 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
               _cardEstoque(),
               _cardLeitoes(),
               _cardCobertura(),
+              _cardAnotacoes(),
             ],
           ),
         ),
         const SizedBox(height: 10),
-        _buildDots(3),
+        _buildDots(4),
       ],
     );
   }
@@ -94,7 +106,7 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _cabecalho('RESUMO'),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -103,11 +115,11 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _infoTexto('Estoque: ${widget.estoqueKg.toStringAsFixed(0)} kgs.'),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 12),
                   _infoTexto('Rebanho: ${widget.rebanho}.'),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 12),
                   _infoTexto('Leitões: ${widget.leitoes}.'),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 12),
                   _infoTexto('Registro: ${widget.dataRegistro}.'),
                 ],
               ),
@@ -116,21 +128,21 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
                   const Text(
                     'Estoque de ração',
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Stack(
                     alignment: Alignment.center,
                     children: [
                       SizedBox(
-                        width: 72,
-                        height: 72,
+                        width: 96,
+                        height: 96,
                         child: CircularProgressIndicator(
                           value: widget.percentualRacao,
-                          strokeWidth: 6,
+                          strokeWidth: 8,
                           backgroundColor: Colors.black26,
                           color: Colors.white,
                         ),
@@ -140,7 +152,7 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          fontSize: 15,
+                          fontSize: 20,
                         ),
                       ),
                     ],
@@ -179,7 +191,7 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
               'Total no plantel: ${widget.leitoes}',
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 14,
+                fontSize: 18,
                 color: Colors.black87,
               ),
             ),
@@ -214,10 +226,80 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
               'Rebanho total: ${widget.rebanho}',
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 14,
+                fontSize: 18,
                 color: Colors.black87,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Card 4: Anotações ───────────────────────────────────────────────────────
+  Widget _cardAnotacoes() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: _cardDecoration,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _cabecalho('ANOTAÇÕES'),
+          const SizedBox(height: 16),
+          Expanded(
+            child: widget.anotacoes.isEmpty
+                ? const Center(
+                    child: Text(
+                      'Nenhuma anotação registrada.',
+                      style: TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: EdgeInsets.zero,
+                    itemCount: widget.anotacoes.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, i) {
+                      final a = widget.anotacoes[i];
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Origem da anotação (de qual lugar ela vem)
+                            Row(
+                              children: [
+                                const Icon(Icons.label_important_outline,
+                                    size: 14, color: Color(0xFF2E7D32)),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    a.origem,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF2E7D32),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              a.texto,
+                              style: const TextStyle(
+                                  fontSize: 14, color: Colors.black87),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -229,21 +311,21 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
   Widget _cabecalho(String titulo) {
     return Row(
       children: [
-        const Icon(Icons.receipt_long, color: Colors.black87, size: 16),
-        const SizedBox(width: 6),
+        const Icon(Icons.receipt_long, color: Colors.black87, size: 20),
+        const SizedBox(width: 8),
         Text(
           titulo,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 13,
+            fontSize: 16,
             color: Colors.black87,
           ),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: 6),
         const Text(
           '2026',
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 12,
             color: Colors.black45,
             fontWeight: FontWeight.bold,
           ),
@@ -256,7 +338,7 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
     return Text(
       texto,
       style: const TextStyle(
-        fontSize: 15,
+        fontSize: 18,
         fontWeight: FontWeight.w900,
         color: Colors.black87,
       ),
@@ -266,19 +348,19 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
   Widget _statCard(IconData icon, String valor, String label) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white, size: 28),
-        const SizedBox(height: 4),
+        Icon(icon, color: Colors.white, size: 36),
+        const SizedBox(height: 6),
         Text(
           valor,
           style: const TextStyle(
-            fontSize: 22,
+            fontSize: 28,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
         Text(
           label,
-          style: const TextStyle(fontSize: 10, color: Colors.black54),
+          style: const TextStyle(fontSize: 12, color: Colors.black54),
           textAlign: TextAlign.center,
         ),
       ],
