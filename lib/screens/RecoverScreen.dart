@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gspr/assets/widgets/loading_bolinhas.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gspr/screen_base.dart';
 import 'package:gspr/assets/widgets/primary__button.dart';
@@ -167,9 +168,7 @@ class _RecoverScreenState extends State<RecoverScreen> {
               const SizedBox(height: 28),
               Center(
                 child: _loading
-                    ? const CircularProgressIndicator(
-                        color: Color(0xFF2E7D32),
-                      )
+                    ? const LoadingBolinhas()
                     : PrimaryButton(
                         text: 'ENVIAR',
                         icon: Icons.send,

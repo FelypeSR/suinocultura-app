@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gspr/assets/widgets/loading_bolinhas.dart';
 import 'package:intl/intl.dart';
 import 'package:gspr/screen_base.dart';
 import 'package:gspr/routes.dart';
@@ -25,7 +26,7 @@ class EstoqueRacaoScreen extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: _verde),
+              child: LoadingBolinhas(),
             );
           }
           if (snapshot.hasError) {
@@ -336,6 +337,8 @@ class _CadastroRacaoScreenState extends State<CadastroRacaoScreen> {
   final _consumoCtrl = TextEditingController();
   final _observacaoCtrl = TextEditingController();
 
+  // Tipos sugeridos por padrão. As rações já cadastradas no sistema são
+  // somadas a esta lista no seletor (ver _selecionarTipo).
   static const _tipos = [
     'Inicial',
     'Crescimento',
@@ -343,6 +346,10 @@ class _CadastroRacaoScreenState extends State<CadastroRacaoScreen> {
     'Gestação',
     'Lactação',
   ];
+
+  // Valor sentinela devolvido pelo seletor quando o usuário escolhe
+  // "Adicionar nova ração".
+  static const _novaRacaoSentinela = '__nova_racao__';
 
   // Classes de animais que consomem a ração.
   static const _classes = {
@@ -363,6 +370,17 @@ class _CadastroRacaoScreenState extends State<CadastroRacaoScreen> {
   }
 
   Future<void> _selecionarTipo() async {
+    // Junta os tipos sugeridos com as rações já cadastradas no sistema,
+    // sem repetir, para o produtor reaproveitar o que já usou antes.
+    final racoes = await _service.listar().first;
+    if (!mounted) return;
+
+    final tipos = <String>[..._tipos];
+    for (final r in racoes) {
+      final t = r.tipo.trim();
+      if (t.isNotEmpty && !tipos.contains(t)) tipos.add(t);
+    }
+
     final selecionado = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: Colors.white,
@@ -370,21 +388,68 @@ class _CadastroRacaoScreenState extends State<CadastroRacaoScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: _tipos
-              .map((t) => ListTile(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ...tipos.map((t) => ListTile(
                     title: Text(t),
                     trailing: _tipo == t
                         ? const Icon(Icons.check, color: _verde)
                         : null,
                     onTap: () => Navigator.pop(context, t),
-                  ))
-              .toList(),
+                  )),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.add, color: _verde),
+                title: const Text('Adicionar nova ração'),
+                onTap: () => Navigator.pop(context, _novaRacaoSentinela),
+              ),
+            ],
+          ),
         ),
       ),
     );
-    if (selecionado != null) setState(() => _tipo = selecionado);
+
+    if (selecionado == null) return;
+    if (selecionado == _novaRacaoSentinela) {
+      await _adicionarNovaRacao();
+      return;
+    }
+    setState(() => _tipo = selecionado);
+  }
+
+  /// Diálogo simples para digitar uma ração nova. Ela passa a aparecer no
+  /// seletor automaticamente assim que a entrada for salva no sistema.
+  Future<void> _adicionarNovaRacao() async {
+    final ctrl = TextEditingController();
+    final nome = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Nova ração'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(hintText: 'Nome da ração'),
+          onSubmitted: (v) => Navigator.pop(context, v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, ctrl.text.trim()),
+            child: const Text('Adicionar'),
+          ),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (nome != null && nome.isNotEmpty) {
+      setState(() => _tipo = nome);
+    }
   }
 
   double? _parseNum(String v) => double.tryParse(v.trim().replaceAll(',', '.'));
@@ -632,7 +697,7 @@ class _CadastroRacaoScreenState extends State<CadastroRacaoScreen> {
 
               Center(
                 child: _salvando
-                    ? const CircularProgressIndicator(color: _verde)
+                    ? const LoadingBolinhas()
                     : ElevatedButton.icon(
                         onPressed: _salvar,
                         icon: const Icon(Icons.check, color: Colors.white),

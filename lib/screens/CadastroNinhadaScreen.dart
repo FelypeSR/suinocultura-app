@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gspr/assets/widgets/loading_bolinhas.dart';
 import 'package:intl/intl.dart';
 import 'package:gspr/screen_base.dart';
 import 'package:gspr/models/animal_model.dart';
@@ -111,7 +112,7 @@ class _CadastroNinhadaScreenState extends State<CadastroNinhadaScreen> {
                       if (snapshot.connectionState ==
                           ConnectionState.waiting) {
                         return const Center(
-                          child: CircularProgressIndicator(color: _verde),
+                          child: LoadingBolinhas(),
                         );
                       }
                       final femeas = snapshot.data ?? [];
@@ -374,7 +375,7 @@ class _CadastroNinhadaScreenState extends State<CadastroNinhadaScreen> {
 
               Center(
                 child: _salvando
-                    ? const CircularProgressIndicator(color: _verde)
+                    ? const LoadingBolinhas()
                     : ElevatedButton.icon(
                         onPressed: _salvar,
                         icon: const Icon(Icons.check, color: Colors.white),

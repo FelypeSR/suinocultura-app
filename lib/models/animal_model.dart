@@ -1,6 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AnimalModel {
+  /// Gestação da fêmea suína dura ~114 dias. Usado para calcular a previsão
+  /// de parto a partir da data da cobertura.
+  static const int diasGestacao = 114;
+
   final String? id;
   final String codigo;
   final String sexo; // 'macho' | 'femea'
@@ -10,6 +14,19 @@ class AnimalModel {
   final String produtividade;
   final String saude;
   final DateTime criadoEm;
+
+  /// Situação atual do animal: 'ativo' | 'gestante' | 'vendido'.
+  final String status;
+
+  // Dados da gestação atual (somente fêmea com status 'gestante').
+  final String? machoCobertura; // código do macho usado na cobertura
+  final DateTime? dataCobertura;
+  final DateTime? previsaoParto;
+
+  // Dados da venda (somente quando status 'vendido').
+  final String? compradorVenda;
+  final double? valorVenda;
+  final DateTime? dataVenda;
 
   AnimalModel({
     this.id,
@@ -21,7 +38,19 @@ class AnimalModel {
     required this.produtividade,
     required this.saude,
     DateTime? criadoEm,
+    this.status = 'ativo',
+    this.machoCobertura,
+    this.dataCobertura,
+    this.previsaoParto,
+    this.compradorVenda,
+    this.valorVenda,
+    this.dataVenda,
   }) : criadoEm = criadoEm ?? DateTime.now();
+
+  bool get isMacho => sexo == 'macho';
+  bool get isFemea => sexo == 'femea';
+  bool get gestante => status == 'gestante';
+  bool get vendido => status == 'vendido';
 
   // Regra: 7 meses = 210 dias
   bool get podeCobertura {
@@ -46,10 +75,21 @@ class AnimalModel {
       'produtividade': produtividade,
       'saude': saude,
       'criadoEm': Timestamp.fromDate(criadoEm),
+      'status': status,
+      if (machoCobertura != null) 'machoCobertura': machoCobertura,
+      if (dataCobertura != null)
+        'dataCobertura': Timestamp.fromDate(dataCobertura!),
+      if (previsaoParto != null)
+        'previsaoParto': Timestamp.fromDate(previsaoParto!),
+      if (compradorVenda != null) 'compradorVenda': compradorVenda,
+      if (valorVenda != null) 'valorVenda': valorVenda,
+      if (dataVenda != null) 'dataVenda': Timestamp.fromDate(dataVenda!),
     };
   }
 
   factory AnimalModel.fromMap(String id, Map<String, dynamic> map) {
+    DateTime? parseData(dynamic v) => v is Timestamp ? v.toDate() : null;
+
     return AnimalModel(
       id: id,
       codigo: map['codigo'] ?? '',
@@ -60,6 +100,13 @@ class AnimalModel {
       produtividade: map['produtividade'] ?? '',
       saude: map['saude'] ?? '',
       criadoEm: (map['criadoEm'] as Timestamp).toDate(),
+      status: map['status'] ?? 'ativo',
+      machoCobertura: map['machoCobertura'],
+      dataCobertura: parseData(map['dataCobertura']),
+      previsaoParto: parseData(map['previsaoParto']),
+      compradorVenda: map['compradorVenda'],
+      valorVenda: (map['valorVenda'] as num?)?.toDouble(),
+      dataVenda: parseData(map['dataVenda']),
     );
   }
 }

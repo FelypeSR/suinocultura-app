@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'screens/telateste.dart';
 import 'screens/LoginScreen.dart';
+import 'assets/widgets/loading_bolinhas.dart';
 
 /// Decide qual tela mostrar conforme o estado de autenticação:
 /// - usuário logado  -> home (WidgetTestScreen)
@@ -19,7 +20,7 @@ class AuthGate extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator(color: Color(0xFF2E7D32))),
+            body: Center(child: LoadingBolinhas()),
           );
         }
         if (snapshot.hasData) {

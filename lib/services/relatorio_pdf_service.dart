@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -27,12 +28,14 @@ class RelatorioPdfService {
     final animais = await _animalService.listar().first;
     final racoes = await _racaoService.listar().first;
     final ninhadas = await _ninhadaService.listar().first;
+    final logo = await _carregarLogo();
 
     final doc = _montarDocumento(
       produtor: produtor,
       animais: animais,
       racoes: racoes,
       ninhadas: ninhadas,
+      logo: logo,
     );
 
     await Printing.layoutPdf(
@@ -42,11 +45,23 @@ class RelatorioPdfService {
     );
   }
 
+  /// Carrega o ícone do app para usar no cabeçalho. Devolve null se, por
+  /// algum motivo, o asset não puder ser lido — o PDF é gerado mesmo assim.
+  Future<pw.MemoryImage?> _carregarLogo() async {
+    try {
+      final bytes = await rootBundle.load('lib/assets/widgets/itens/iconapp.png');
+      return pw.MemoryImage(bytes.buffer.asUint8List());
+    } catch (_) {
+      return null;
+    }
+  }
+
   pw.Document _montarDocumento({
     required String produtor,
     required List<AnimalModel> animais,
     required List<RacaoModel> racoes,
     required List<NinhadaModel> ninhadas,
+    pw.MemoryImage? logo,
   }) {
     final doc = pw.Document();
     final fmtData = DateFormat('dd/MM/yyyy');
@@ -73,9 +88,11 @@ class RelatorioPdfService {
           ),
         ),
         build: (context) => [
-          _cabecalho(produtor, fmtDataHora.format(DateTime.now())),
+          _cabecalho(produtor, fmtDataHora.format(DateTime.now()), logo),
           pw.SizedBox(height: 20),
           _secaoRebanho(animais),
+          pw.SizedBox(height: 18),
+          _secaoVendas(animais, fmtData),
           pw.SizedBox(height: 18),
           _secaoNinhada(ninhadas, fmtData),
           pw.SizedBox(height: 18),
@@ -90,7 +107,7 @@ class RelatorioPdfService {
   // -------------------------------------------------------------------------
   // Cabeçalho
   // -------------------------------------------------------------------------
-  pw.Widget _cabecalho(String produtor, String geradoEm) {
+  pw.Widget _cabecalho(String produtor, String geradoEm, pw.MemoryImage? logo) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(16),
       decoration: const pw.BoxDecoration(
@@ -101,19 +118,29 @@ class RelatorioPdfService {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
+          // Logo do app (selo branco) + título.
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
-              pw.Text('Relatório da Granja',
-                  style: pw.TextStyle(
-                    color: PdfColors.white,
-                    fontSize: 22,
-                    fontWeight: pw.FontWeight.bold,
-                  )),
-              pw.SizedBox(height: 4),
-              pw.Text('GSPR — Gestão de Suinocultura',
-                  style: pw.TextStyle(
-                      color: PdfColors.white, fontSize: 11)),
+              if (logo != null) ...[
+                pw.Image(logo, width: 54, height: 54, fit: pw.BoxFit.contain),
+                pw.SizedBox(width: 12),
+              ],
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('Relatório da Granja',
+                      style: pw.TextStyle(
+                        color: PdfColors.white,
+                        fontSize: 22,
+                        fontWeight: pw.FontWeight.bold,
+                      )),
+                  pw.SizedBox(height: 4),
+                  pw.Text('GSPR — Gestão de Suinocultura',
+                      style: pw.TextStyle(
+                          color: PdfColors.white, fontSize: 11)),
+                ],
+              ),
             ],
           ),
           pw.Column(
@@ -186,6 +213,63 @@ class RelatorioPdfService {
                 .toList(),
           ),
         ],
+      ],
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Seção: Vendas
+  // -------------------------------------------------------------------------
+  pw.Widget _secaoVendas(List<AnimalModel> animais, DateFormat fmtData) {
+    // Apenas animais marcados como vendidos, mais recentes primeiro.
+    final vendidos = animais.where((a) => a.vendido).toList()
+      ..sort((a, b) => (b.dataVenda ?? b.criadoEm)
+          .compareTo(a.dataVenda ?? a.criadoEm));
+
+    if (vendidos.isEmpty) {
+      return _secao('Vendas', [
+        pw.Text('Nenhuma venda registrada até o momento.',
+            style: pw.TextStyle(color: _cinza, fontSize: 11)),
+      ]);
+    }
+
+    final totalVendas = vendidos.length;
+    final machosVendidos = vendidos.where((a) => a.sexo == 'macho').length;
+    final femeasVendidas = vendidos.where((a) => a.sexo == 'femea').length;
+    final valorTotal =
+        vendidos.fold<double>(0, (s, a) => s + (a.valorVenda ?? 0));
+    final ticketMedio = totalVendas == 0 ? 0.0 : valorTotal / totalVendas;
+
+    return _secao(
+      'Vendas',
+      [
+        _tabelaIndicadores([
+          ['Animais vendidos', '$totalVendas'],
+          ['Machos vendidos', '$machosVendidos'],
+          ['Fêmeas vendidas', '$femeasVendidas'],
+          ['Valor total arrecadado', 'R\$ ${valorTotal.toStringAsFixed(2)}'],
+          ['Valor médio por animal', 'R\$ ${ticketMedio.toStringAsFixed(2)}'],
+        ]),
+        pw.SizedBox(height: 10),
+        pw.Text('Vendas registradas',
+            style:
+                pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 4),
+        _tabela(
+          ['Data', 'Código', 'Sexo', 'Comprador', 'Valor'],
+          vendidos
+              .map((a) => [
+                    a.dataVenda != null ? fmtData.format(a.dataVenda!) : '—',
+                    a.codigo,
+                    a.sexo == 'macho' ? 'Macho' : 'Fêmea',
+                    (a.compradorVenda == null ||
+                            a.compradorVenda!.trim().isEmpty)
+                        ? '—'
+                        : a.compradorVenda!.trim(),
+                    'R\$ ${(a.valorVenda ?? 0).toStringAsFixed(2)}',
+                  ])
+              .toList(),
+        ),
       ],
     );
   }

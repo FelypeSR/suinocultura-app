@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gspr/assets/widgets/loading_bolinhas.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gspr/screen_base.dart';
 import 'package:gspr/theme/app_theme.dart';
@@ -144,7 +145,7 @@ class _CadastroUsuarioScreenState extends State<CadastroUsuarioScreen> {
 
               Center(
                 child: _loading
-                    ? const CircularProgressIndicator(color: _verde)
+                    ? const LoadingBolinhas()
                     : ElevatedButton.icon(
                         onPressed: _cadastrar,
                         icon: const Icon(Icons.check, color: Colors.white),

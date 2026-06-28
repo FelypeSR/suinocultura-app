@@ -3,6 +3,7 @@ import 'screens/LoginScreen.dart';
 import 'screens/HomeScreen.dart';
 import 'screens/RecoverScreen.dart';
 import 'screens/CadastroScreen.dart';
+import 'screens/EditarAnimalScreen.dart';
 import 'screens/CadastroNinhadaScreen.dart';
 import 'screens/CadastroUsuarioScreen.dart';
 import 'screens/RegistroVacinaScreen.dart';
@@ -21,6 +22,7 @@ class Rotas {
   static const String recuperarSenha = '/recuperar-senha';
   static const String painel = '/painel'; // HomeScreen (dashboard/perfil)
   static const String cadastroAnimal = '/cadastro-animal';
+  static const String editarAnimal = '/editar-animal';
   static const String cadastroNinhada = '/cadastro-ninhada';
   static const String registroVacina = '/registro-vacina';
   static const String estoqueRacao = '/estoque-racao';
@@ -35,6 +37,7 @@ class Rotas {
     recuperarSenha: (_) => const RecoverScreen(),
     painel: (_) => const HomeScreen(),
     cadastroAnimal: (_) => const CadastroScreen(),
+    editarAnimal: (_) => const EditarAnimalScreen(),
     cadastroNinhada: (_) => const CadastroNinhadaScreen(),
     registroVacina: (_) => const RegistroVacinaScreen(),
     estoqueRacao: (_) => EstoqueRacaoScreen(),

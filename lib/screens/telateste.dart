@@ -151,6 +151,31 @@ class _WidgetTestScreenState extends State<WidgetTestScreen> {
         ? '--/--'
         : _formatarDiaMes(racoes.first.criadoEm);
 
+    // ── Card Cobertura (derivado dos animais/ninhadas) ──────────────────────
+    final hoje = DateTime.now();
+    final femeas = animais.where((a) => a.isFemea);
+
+    // Gestantes: fêmeas com status 'gestante' (exato).
+    final gestantes = femeas.where((a) => a.gestante).length;
+
+    // Em aleitamento: mães com ninhada recente (parto nos últimos 35 dias) e
+    // leitões ainda não totalmente desmamados. Conta mães distintas.
+    final maesAleitando = ninhadas
+        .where((n) =>
+            hoje.difference(n.data).inDays <= 35 && n.desmamados < n.vivos)
+        .map((n) => n.maeCodigo)
+        .toSet();
+    final emAleitamento = maesAleitando.length;
+
+    // Em cobertura: matrizes disponíveis — fêmeas ativas em idade reprodutiva
+    // (≥210 dias), que não estão gestantes nem amamentando.
+    final emCobertura = femeas
+        .where((a) =>
+            a.status == 'ativo' &&
+            a.podeCobertura &&
+            !maesAleitando.contains(a.codigo))
+        .length;
+
     return ResumodeEventos(
       estoqueKg: estoqueKg,
       rebanho: animais.length,
@@ -160,6 +185,9 @@ class _WidgetTestScreenState extends State<WidgetTestScreen> {
       nascimentos: nascimentos,
       desmames: desmames,
       mortalidade: mortalidade,
+      emCobertura: emCobertura,
+      gestantes: gestantes,
+      emAleitamento: emAleitamento,
       anotacoes: anotacoes,
     );
   }
@@ -226,6 +254,14 @@ class _WidgetTestScreenState extends State<WidgetTestScreen> {
               onTap: () {
                 Navigator.pop(sheetContext);
                 Navigator.pushNamed(context, Rotas.cadastroAnimal);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_note, color: Color(0xFF2E7D32)),
+              title: const Text('Editar suíno'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                Navigator.pushNamed(context, Rotas.editarAnimal);
               },
             ),
             ListTile(
@@ -318,8 +354,8 @@ class _WidgetTestScreenState extends State<WidgetTestScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Barra de pesquisa
-                  _BarraPesquisa(),
+                  // Barra de pesquisa de funções do app
+                  _BuscaFuncoes(onGerarRelatorio: _gerarRelatorioPdf),
                   const SizedBox(height: 28),
 
                   // Dois cards de eventos próximos lado a lado, vindos do
@@ -602,15 +638,163 @@ class _EventoVazio extends StatelessWidget {
   }
 }
 
-/// Campo de busca arredondado (estilo herdado do tema central).
-class _BarraPesquisa extends StatelessWidget {
+/// Uma função do app que pode ser encontrada pela busca.
+class _Funcao {
+  final String nome;
+  final IconData icone;
+  final void Function(BuildContext context) abrir;
+  const _Funcao(this.nome, this.icone, this.abrir);
+}
+
+/// Barra de busca que pesquisa **apenas as funções/telas do app** (não busca
+/// dados como animais ou rações). Ao digitar, mostra uma lista filtrada logo
+/// abaixo do campo; tocar em um resultado abre a função correspondente.
+class _BuscaFuncoes extends StatefulWidget {
+  /// Ação da função "Gerar relatório PDF" (vive no state da home).
+  final VoidCallback onGerarRelatorio;
+  const _BuscaFuncoes({required this.onGerarRelatorio});
+
+  @override
+  State<_BuscaFuncoes> createState() => _BuscaFuncoesState();
+}
+
+class _BuscaFuncoesState extends State<_BuscaFuncoes> {
+  static const _verde = Color(0xFF2E7D32);
+
+  final _controller = TextEditingController();
+  final _focus = FocusNode();
+  final _link = LayerLink();
+  final _portal = OverlayPortalController();
+
+  late final List<_Funcao> _funcoes = [
+    _Funcao('Cadastrar suíno', Icons.add_circle_outline,
+        (c) => Navigator.pushNamed(c, Rotas.cadastroAnimal)),
+    _Funcao('Editar suíno', Icons.edit_note,
+        (c) => Navigator.pushNamed(c, Rotas.editarAnimal)),
+    _Funcao('Cadastrar ninhada', Icons.pets,
+        (c) => Navigator.pushNamed(c, Rotas.cadastroNinhada)),
+    _Funcao('Registrar vacinação', Icons.vaccines_outlined,
+        (c) => Navigator.pushNamed(c, Rotas.registroVacina)),
+    _Funcao('Estoque de ração', Icons.inventory_2,
+        (c) => Navigator.pushNamed(c, Rotas.estoqueRacao)),
+    _Funcao('Cadastrar ração', Icons.add_box_outlined,
+        (c) => Navigator.pushNamed(c, Rotas.cadastroRacao)),
+    _Funcao('Cadastrar usuário', Icons.person_add_alt,
+        (c) => Navigator.pushNamed(c, Rotas.cadastroUsuario)),
+    _Funcao('Gerar relatório PDF', Icons.picture_as_pdf_outlined,
+        (_) => widget.onGerarRelatorio()),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_atualizar);
+    _focus.addListener(_atualizar);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  /// Minúsculas + sem acentos, para a busca ignorar acentuação.
+  String _normaliza(String s) {
+    s = s.toLowerCase();
+    const com = 'áàâãäéèêëíìîïóòôõöúùûüç';
+    const sem = 'aaaaaeeeeiiiiooooouuuuc';
+    for (var i = 0; i < com.length; i++) {
+      s = s.replaceAll(com[i], sem[i]);
+    }
+    return s;
+  }
+
+  List<_Funcao> get _resultados {
+    final q = _normaliza(_controller.text.trim());
+    if (q.isEmpty) return const [];
+    return _funcoes.where((f) => _normaliza(f.nome).contains(q)).toList();
+  }
+
+  void _atualizar() {
+    final mostrar = _focus.hasFocus && _resultados.isNotEmpty;
+    if (mostrar) {
+      _portal.show();
+    } else {
+      _portal.hide();
+    }
+    if (mounted) setState(() {});
+  }
+
+  void _selecionar(_Funcao f) {
+    _controller.clear();
+    _focus.unfocus();
+    _portal.hide();
+    f.abrir(context);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      decoration: const InputDecoration(
-        hintText: 'pesquisar',
-        prefixIcon: Icon(Icons.search),
-        isDense: true,
+    return CompositedTransformTarget(
+      link: _link,
+      child: OverlayPortal(
+        controller: _portal,
+        overlayChildBuilder: (context) {
+          return Align(
+            alignment: Alignment.topLeft,
+            child: CompositedTransformFollower(
+              link: _link,
+              targetAnchor: Alignment.bottomLeft,
+              followerAnchor: Alignment.topLeft,
+              offset: const Offset(0, 6),
+              child: _painelResultados(),
+            ),
+          );
+        },
+        child: TextField(
+          controller: _controller,
+          focusNode: _focus,
+          decoration: const InputDecoration(
+            hintText: 'pesquisar funções',
+            prefixIcon: Icon(Icons.search),
+            isDense: true,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _painelResultados() {
+    // Acompanha a largura do campo (mesma da coluna da home).
+    final largura = MediaQuery.of(context).size.width - 32;
+    final resultados = _resultados;
+    return Material(
+      elevation: 4,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: largura,
+        constraints: const BoxConstraints(maxHeight: 280),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.black12),
+        ),
+        child: ListView.separated(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          itemCount: resultados.length,
+          separatorBuilder: (_, _) =>
+              const Divider(height: 1, indent: 52, color: Colors.black12),
+          itemBuilder: (context, i) {
+            final f = resultados[i];
+            return ListTile(
+              dense: true,
+              leading: Icon(f.icone, color: _verde),
+              title: Text(f.nome),
+              onTap: () => _selecionar(f),
+            );
+          },
+        ),
       ),
     );
   }

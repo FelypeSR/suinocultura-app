@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:gspr/assets/widgets/loading_bolinhas.dart';
 import 'package:intl/intl.dart';
 import 'package:gspr/screen_base.dart';
 import 'package:gspr/models/animal_model.dart';
@@ -340,9 +341,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
               // BOTÃO SALVAR
               Center(
                 child: _salvando
-                    ? const CircularProgressIndicator(
-                        color: Color(0xFF2E7D32),
-                      )
+                    ? const LoadingBolinhas()
                     : ElevatedButton.icon(
                         onPressed: _salvar,
                         icon: const Icon(Icons.check, color: Colors.white),

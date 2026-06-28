@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gspr/assets/widgets/loading_bolinhas.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:gspr/screen_base.dart';
@@ -193,7 +194,7 @@ class _LoginScreenState extends State<LoginScreen> {
             // BOTÃO DE LOGIN POR EMAIL/SENHA (compacto, centralizado)
             Center(
               child: _loading
-                  ? const CircularProgressIndicator()
+                  ? const LoadingBolinhas()
                   : PrimaryButton(
                       text: 'ENTRAR',
                       icon: Icons.check,
@@ -228,7 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
             // Durante o login (_loading) mostra um indicador no lugar.
             Center(
               child: _loading
-                  ? const CircularProgressIndicator()
+                  ? const LoadingBolinhas()
                   : InkWell(
                       onTap: _signInWithGoogle,
                       borderRadius: BorderRadius.circular(30),
