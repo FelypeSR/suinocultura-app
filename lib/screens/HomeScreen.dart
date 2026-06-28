@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'screen_base.dart';
-import 'assets/widgets/hide_bar.dart';
+import 'package:gspr/screen_base.dart';
+import 'package:gspr/assets/widgets/hide_bar.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:gspr/screen_base.dart';
-import 'assets/widgets/primary__button.dart';
-import 'routes.dart';
+import 'package:gspr/assets/widgets/primary__button.dart';
+import 'package:gspr/routes.dart';
 
 // StatefulWidget porque precisamos controlar o estado de carregamento
 // enquanto o login com o Google está em andamento.
@@ -122,70 +122,60 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
     return BaseScreen(
       title: 'GSPR',
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 20),
-
-            // USUÁRIO
-            const Text(
-              'usuário:',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black54,
+            Text(
+              'Bem-vindo de volta',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
+            Text(
+              'Entre para gerenciar sua granja',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 28),
 
+            // USUÁRIO
+            Text('Usuário', style: theme.textTheme.labelLarge),
+            const SizedBox(height: 8),
             TextField(
               controller: _emailCtrl,
               keyboardType: TextInputType.emailAddress,
               autocorrect: false,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: 'email do usuário',
-                prefixIcon: const Icon(Icons.person_outline),
-                filled: true,
-                fillColor: Colors.grey[200],
-                contentPadding: const EdgeInsets.symmetric(vertical: 18),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                prefixIcon: Icon(Icons.person_outline),
               ),
             ),
 
             const SizedBox(height: 20),
 
             // SENHA
-            const Text(
-              'senha:',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black54,
-              ),
-            ),
+            Text('Senha', style: theme.textTheme.labelLarge),
             const SizedBox(height: 8),
-
             TextField(
               controller: _senhaCtrl,
               obscureText: true,
               onSubmitted: (_) => _signInWithEmail(),
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: 'senha',
-                prefixIcon: const Icon(Icons.lock_outline),
-                filled: true,
-                fillColor: Colors.grey[200],
-                contentPadding: const EdgeInsets.symmetric(vertical: 18),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                prefixIcon: Icon(Icons.lock_outline),
               ),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
 
             // ESQUECEU SENHA
             Align(
@@ -194,22 +184,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: () {
                   Navigator.of(context).pushNamed(Rotas.recuperarSenha);
                 },
-                child: const Text(
-                  'Esqueceu a senha?',
-                  style: TextStyle(
-                    color: Color(0xFF2E7D32),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: const Text('Esqueceu a senha?'),
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
-            // BOTÃO DE LOGIN POR EMAIL/SENHA
+            // BOTÃO DE LOGIN POR EMAIL/SENHA (compacto, centralizado)
             Center(
               child: _loading
-                  ? const CircularProgressIndicator(color: Color(0xFF2E7D32))
+                  ? const CircularProgressIndicator()
                   : PrimaryButton(
                       text: 'ENTRAR',
                       icon: Icons.check,
@@ -217,47 +201,45 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
             ),
 
-            const SizedBox(height: 40),
+            const SizedBox(height: 28),
 
-            // BOTÃO GOOGLE — usa imagem separada porque não é um ícone do Material.
-            // Quando pressionado chama _signInWithGoogle().
-            // Enquanto o login está em andamento (_loading = true), exibe um
-            // indicador de progresso no lugar do ícone e bloqueia novos toques.
-            Center(
-              child: ElevatedButton.icon(
-                onPressed: _loading ? null : _signInWithGoogle,
-                icon: _loading
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : Image.asset(
-                        'lib/assets/widgets/itens/google.png',
-                        height: 24,
-                      ),
-                label: const Text(
-                  'Login com Gmail',
-                  style: TextStyle(fontSize: 18),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2E7D32),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 30,
-                    vertical: 14,
+            // Separador "ou"
+            Row(
+              children: [
+                Expanded(child: Divider(color: colors.outlineVariant)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    'ou',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  elevation: 5,
                 ),
-              ),
+                Expanded(child: Divider(color: colors.outlineVariant)),
+              ],
             ),
 
             const SizedBox(height: 24),
+
+            // BOTÃO GOOGLE — a imagem google.png já é um botão completo
+            // ("Login com Gmail"), então ela mesma é o alvo de toque. Evita
+            // repetir o texto que antes vinha como label ao lado.
+            // Durante o login (_loading) mostra um indicador no lugar.
+            Center(
+              child: _loading
+                  ? const CircularProgressIndicator()
+                  : InkWell(
+                      onTap: _signInWithGoogle,
+                      borderRadius: BorderRadius.circular(30),
+                      child: Image.asset(
+                        'lib/assets/widgets/itens/google.png',
+                        height: 52,
+                      ),
+                    ),
+            ),
+
+            const SizedBox(height: 16),
 
             // LINK PARA CADASTRO DE NOVO USUÁRIO
             Center(
@@ -266,15 +248,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     ? null
                     : () => Navigator.of(context)
                         .pushNamed(Rotas.cadastroUsuario),
-                child: const Text.rich(
+                child: Text.rich(
                   TextSpan(
                     text: 'Não tem conta? ',
-                    style: TextStyle(color: Colors.black54),
+                    style: TextStyle(color: colors.onSurfaceVariant),
                     children: [
                       TextSpan(
                         text: 'Cadastre-se',
                         style: TextStyle(
-                          color: Color(0xFF2E7D32),
+                          color: colors.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

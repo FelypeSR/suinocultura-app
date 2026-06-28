@@ -1,8 +1,12 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'screen_base.dart';
-import 'models/animal_model.dart';
-import 'services/animal_service.dart';
+import 'package:gspr/screen_base.dart';
+import 'package:gspr/models/animal_model.dart';
+import 'package:gspr/services/animal_service.dart';
+import 'package:gspr/screens/CadastroNinhadaScreen.dart';
+import 'package:gspr/theme/app_theme.dart';
 
 class CadastroScreen extends StatefulWidget {
   const CadastroScreen({super.key});
@@ -19,11 +23,48 @@ class _CadastroScreenState extends State<CadastroScreen> {
   DateTime? _dataNascimento;
   bool _salvando = false;
 
+  final _random = Random();
   final _codigoCtrl = TextEditingController();
   final _pesoCtrl = TextEditingController();
   final _racaCtrl = TextEditingController();
   final _produtividadeCtrl = TextEditingController();
   final _saudeCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _gerarCodigo();
+  }
+
+  /// Gera um código aleatório no formato "M-04821" / "F-04821", com o
+  /// prefixo do sexo selecionado e 5 dígitos aleatórios.
+  void _gerarCodigo() {
+    final prefixo = _sexo == 'femea' ? 'F' : 'M';
+    final numero = _random.nextInt(100000).toString().padLeft(5, '0');
+    _codigoCtrl.text = '$prefixo-$numero';
+  }
+
+  /// Troca o sexo e regenera o código para refletir o novo prefixo.
+  void _selecionarSexo(String sexo) {
+    setState(() {
+      _sexo = sexo;
+      _gerarCodigo();
+    });
+  }
+
+  /// Idade da fêmea em dias a partir da data de nascimento.
+  bool get _disponivelCobertura {
+    if (_dataNascimento == null) return false;
+    return DateTime.now().difference(_dataNascimento!).inDays >= 210;
+  }
+
+  /// Dias que ainda faltam para a fêmea ficar apta à cobertura.
+  int get _diasParaCobertura {
+    if (_dataNascimento == null) return 210;
+    final dias = DateTime.now().difference(_dataNascimento!).inDays;
+    final faltam = 210 - dias;
+    return faltam < 0 ? 0 : faltam;
+  }
 
   @override
   void dispose() {
@@ -56,13 +97,13 @@ class _CadastroScreenState extends State<CadastroScreen> {
     if (picked != null) setState(() => _dataNascimento = picked);
   }
 
-  Future<void> _salvar() async {
-    if (!_formKey.currentState!.validate()) return;
+  /// Valida e grava o animal. Devolve o id salvo, ou null se a validação
+  /// falhar ou ocorrer um erro.
+  Future<String?> _persistir() async {
+    if (!_formKey.currentState!.validate()) return null;
     if (_dataNascimento == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecione a data de nascimento')),
-      );
-      return;
+      context.showErrorSnackBar('Selecione a data de nascimento');
+      return null;
     }
 
     setState(() => _salvando = true);
@@ -76,25 +117,36 @@ class _CadastroScreenState extends State<CadastroScreen> {
         produtividade: _produtividadeCtrl.text.trim(),
         saude: _saudeCtrl.text.trim(),
       );
-      await _service.salvar(animal);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Animal cadastrado com sucesso!'),
-            backgroundColor: Color(0xFF2E7D32),
-          ),
-        );
-        Navigator.pop(context);
-      }
+      return await _service.salvar(animal);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao salvar: $e')),
-        );
-      }
+      if (mounted) context.showErrorSnackBar('Erro ao salvar: $e');
+      return null;
     } finally {
       if (mounted) setState(() => _salvando = false);
     }
+  }
+
+  Future<void> _salvar() async {
+    final id = await _persistir();
+    if (id != null && mounted) {
+      context.showSuccessSnackBar('Animal cadastrado com sucesso!');
+      Navigator.pop(context);
+    }
+  }
+
+  /// Salva a fêmea e abre o cadastro de ninhada já vinculando-a como mãe.
+  Future<void> _cadastrarFilhotes() async {
+    final id = await _persistir();
+    if (id == null || !mounted) return;
+    final codigo = _codigoCtrl.text.trim();
+    final navigator = Navigator.of(context);
+    context.showSuccessSnackBar('Fêmea cadastrada! Registre a ninhada.');
+    navigator.pushReplacement(
+      MaterialPageRoute(
+        builder: (_) =>
+            CadastroNinhadaScreen(maeId: id, maeCodigo: codigo),
+      ),
+    );
   }
 
   @override
@@ -114,13 +166,13 @@ class _CadastroScreenState extends State<CadastroScreen> {
                   _SexoChip(
                     label: 'Macho',
                     selecionado: _sexo == 'macho',
-                    onTap: () => setState(() => _sexo = 'macho'),
+                    onTap: () => _selecionarSexo('macho'),
                   ),
                   const SizedBox(width: 12),
                   _SexoChip(
                     label: 'Fêmea',
                     selecionado: _sexo == 'femea',
-                    onTap: () => setState(() => _sexo = 'femea'),
+                    onTap: () => _selecionarSexo('femea'),
                   ),
                   const Spacer(),
                   GestureDetector(
@@ -135,12 +187,18 @@ class _CadastroScreenState extends State<CadastroScreen> {
               ),
               const SizedBox(height: 24),
 
-              // CÓDIGO
+              // CÓDIGO (gerado automaticamente; editável e regenerável)
               _Campo(
                 controller: _codigoCtrl,
                 hint: 'código',
                 validator: (v) =>
                     (v == null || v.trim().isEmpty) ? 'Informe o código' : null,
+                suffix: IconButton(
+                  icon: const Icon(Icons.casino_outlined,
+                      color: Color(0xFF2E7D32)),
+                  tooltip: 'Gerar novo código',
+                  onPressed: () => setState(_gerarCodigo),
+                ),
               ),
               const SizedBox(height: 16),
 
@@ -196,6 +254,17 @@ class _CadastroScreenState extends State<CadastroScreen> {
               ),
               const SizedBox(height: 16),
 
+              // DISPONIBILIDADE PARA COBERTURA (somente fêmeas).
+              // Status automático pela idade: apta a partir de 7 meses (210 dias).
+              if (_sexo == 'femea') ...[
+                _IndicadorCobertura(
+                  semData: _dataNascimento == null,
+                  disponivel: _disponivelCobertura,
+                  diasRestantes: _diasParaCobertura,
+                ),
+                const SizedBox(height: 16),
+              ],
+
               // RAÇA
               _Campo(
                 controller: _racaCtrl,
@@ -241,6 +310,32 @@ class _CadastroScreenState extends State<CadastroScreen> {
                 ),
               ),
               const SizedBox(height: 32),
+
+              // CADASTRO DE FILHOTES (somente fêmeas): salva a fêmea e abre a
+              // tela de ninhada já vinculando-a como mãe.
+              if (_sexo == 'femea') ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _salvando ? null : _cadastrarFilhotes,
+                    icon: const Icon(Icons.child_friendly,
+                        color: Color(0xFF2E7D32)),
+                    label: const Text(
+                      'Cadastrar filhotes (ninhada)',
+                      style: TextStyle(
+                          fontSize: 16, color: Color(0xFF2E7D32)),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(color: Color(0xFF2E7D32)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
 
               // BOTÃO SALVAR
               Center(
@@ -321,17 +416,80 @@ class _SexoChip extends StatelessWidget {
   }
 }
 
+/// Faixa que mostra, automaticamente pela idade, se a fêmea está apta à
+/// cobertura (≥ 7 meses / 210 dias). Apenas informativo.
+class _IndicadorCobertura extends StatelessWidget {
+  final bool semData;
+  final bool disponivel;
+  final int diasRestantes;
+
+  const _IndicadorCobertura({
+    required this.semData,
+    required this.disponivel,
+    required this.diasRestantes,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    late final Color cor;
+    late final IconData icone;
+    late final String texto;
+
+    if (semData) {
+      cor = Colors.grey;
+      icone = Icons.info_outline;
+      texto = 'Informe o nascimento para ver a aptidão à cobertura';
+    } else if (disponivel) {
+      cor = const Color(0xFF2E7D32);
+      icone = Icons.check_circle_outline;
+      texto = 'Disponível para cobertura';
+    } else {
+      cor = const Color(0xFFEF6C00); // laranja
+      icone = Icons.schedule;
+      texto = 'Indisponível — faltam $diasRestantes dias para a cobertura';
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: cor.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cor.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          Icon(icone, color: cor, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              texto,
+              style: TextStyle(
+                color: cor,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Campo extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
+  final Widget? suffix;
 
   const _Campo({
     required this.controller,
     required this.hint,
     this.keyboardType,
     this.validator,
+    this.suffix,
   });
 
   @override
@@ -349,6 +507,7 @@ class _Campo extends StatelessWidget {
         ),
         filled: true,
         fillColor: Colors.white,
+        suffixIcon: suffix,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         border: OutlineInputBorder(

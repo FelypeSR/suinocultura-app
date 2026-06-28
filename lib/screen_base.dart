@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gspr/theme/app_theme.dart';
 
 class BaseScreen extends StatelessWidget {
   // O 'child' é o conteúdo que vai mudar em cada tela (formulário de login, dashboard, etc)
@@ -24,14 +25,7 @@ class BaseScreen extends StatelessWidget {
             width: double.infinity,
             height: 160, // Ajuste a altura conforme necessário
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF5ED84F), // Verde mais claro (topo)
-                  Color(0xFF3BA135), // Verde mais escuro (base)
-                ],
-              ),
+              gradient: AppColors.headerGradient,
               borderRadius: BorderRadius.vertical(
                 bottom: Radius.circular(30), // Borda arredondada embaixo
               ),

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'screen_base.dart';
-import 'models/animal_model.dart';
-import 'models/evento_model.dart';
-import 'services/animal_service.dart';
-import 'services/evento_service.dart';
+import 'package:gspr/screen_base.dart';
+import 'package:gspr/models/animal_model.dart';
+import 'package:gspr/models/evento_model.dart';
+import 'package:gspr/services/animal_service.dart';
+import 'package:gspr/services/evento_service.dart';
+import 'package:gspr/theme/app_theme.dart';
 
 const _verde = Color(0xFF2E7D32);
 
@@ -259,12 +260,7 @@ class _RegistroVacinaScreenState extends State<RegistroVacinaScreen> {
       );
       await _service.salvar(evento);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Vacinação registrada com sucesso!'),
-            backgroundColor: _verde,
-          ),
-        );
+        context.showSuccessSnackBar('Vacinação registrada com sucesso!');
         Navigator.pop(context);
       }
     } catch (e) {
@@ -275,8 +271,7 @@ class _RegistroVacinaScreenState extends State<RegistroVacinaScreen> {
   }
 
   void _avisar(String msg) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    context.showErrorSnackBar(msg);
   }
 
   @override

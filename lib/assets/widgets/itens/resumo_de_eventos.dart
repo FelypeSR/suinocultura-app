@@ -54,19 +54,21 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
   final PageController _controller = PageController();
   int _currentPage = 0;
 
-  static const _gradient = LinearGradient(
-    colors: [Color(0xFF388E3C), Color(0xFF69F0AE)],
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-  );
+  // Decoração dos cards baseada no tema (verde sólido da marca).
+  BoxDecoration get _cardDecoration => BoxDecoration(
+        color: Theme.of(context).colorScheme.primary,
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      );
 
-  static const _cardDecoration = BoxDecoration(
-    gradient: _gradient,
-    borderRadius: BorderRadius.all(Radius.circular(16)),
-    boxShadow: [
-      BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4)),
-    ],
-  );
+  /// Cor do conteúdo sobre o card verde.
+  Color get _onCard => Theme.of(context).colorScheme.onPrimary;
 
   @override
   void dispose() {
@@ -85,8 +87,8 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
             children: [
               _cardEstoque(),
               _cardLeitoes(),
-              _cardCobertura(),
               _cardAnotacoes(),
+              _cardCobertura(),
             ],
           ),
         ),
@@ -125,12 +127,12 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
               ),
               Column(
                 children: [
-                  const Text(
+                  Text(
                     'Estoque de ração',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      color: _onCard,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -143,14 +145,14 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
                         child: CircularProgressIndicator(
                           value: widget.percentualRacao,
                           strokeWidth: 8,
-                          backgroundColor: Colors.black26,
-                          color: Colors.white,
+                          backgroundColor: _onCard.withValues(alpha: 0.25),
+                          color: _onCard,
                         ),
                       ),
                       Text(
                         '${(widget.percentualRacao * 100).toStringAsFixed(0)}%',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: _onCard,
                           fontWeight: FontWeight.bold,
                           fontSize: 20,
                         ),
@@ -189,10 +191,10 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
           Center(
             child: Text(
               'Total no plantel: ${widget.leitoes}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
-                color: Colors.black87,
+                color: _onCard,
               ),
             ),
           ),
@@ -201,7 +203,7 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
     );
   }
 
-  // ── Card 3: Período de cobertura ────────────────────────────────────────────
+  // ── Card 4: Período de cobertura ────────────────────────────────────────────
   Widget _cardCobertura() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -216,7 +218,8 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _statCard(Icons.favorite, '${widget.emCobertura}', 'Em cobertura'),
-              _statCard(Icons.pregnant_woman, '${widget.gestantes}', 'Gestantes'),
+              // Ícone de porco (cofrinho/leitoa) no lugar da gestante humana.
+              _statCard(Icons.savings, '${widget.gestantes}', 'Gestantes'),
               _statCard(Icons.child_friendly, '${widget.emAleitamento}', 'Aleitamento'),
             ],
           ),
@@ -224,10 +227,10 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
           Center(
             child: Text(
               'Rebanho total: ${widget.rebanho}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
-                color: Colors.black87,
+                color: _onCard,
               ),
             ),
           ),
@@ -236,7 +239,7 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
     );
   }
 
-  // ── Card 4: Anotações ───────────────────────────────────────────────────────
+  // ── Card 3: Anotações ───────────────────────────────────────────────────────
   Widget _cardAnotacoes() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -249,10 +252,10 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
           const SizedBox(height: 16),
           Expanded(
             child: widget.anotacoes.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
                       'Nenhuma anotação registrada.',
-                      style: TextStyle(color: Colors.white, fontSize: 14),
+                      style: TextStyle(color: _onCard, fontSize: 14),
                     ),
                   )
                 : ListView.separated(
@@ -311,22 +314,22 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
   Widget _cabecalho(String titulo) {
     return Row(
       children: [
-        const Icon(Icons.receipt_long, color: Colors.black87, size: 20),
+        Icon(Icons.receipt_long, color: _onCard, size: 20),
         const SizedBox(width: 8),
         Text(
           titulo,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
-            color: Colors.black87,
+            color: _onCard,
           ),
         ),
         const SizedBox(width: 6),
-        const Text(
+        Text(
           '2026',
           style: TextStyle(
             fontSize: 12,
-            color: Colors.black45,
+            color: _onCard.withValues(alpha: 0.7),
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -337,10 +340,10 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
   Widget _infoTexto(String texto) {
     return Text(
       texto,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.w900,
-        color: Colors.black87,
+        color: _onCard,
       ),
     );
   }
@@ -348,19 +351,19 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
   Widget _statCard(IconData icon, String valor, String label) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white, size: 36),
+        Icon(icon, color: _onCard, size: 36),
         const SizedBox(height: 6),
         Text(
           valor,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: _onCard,
           ),
         ),
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: Colors.black54),
+          style: TextStyle(fontSize: 12, color: _onCard.withValues(alpha: 0.8)),
           textAlign: TextAlign.center,
         ),
       ],
@@ -368,6 +371,7 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
   }
 
   Widget _buildDots(int count) {
+    final colors = Theme.of(context).colorScheme;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(count, (i) {
@@ -379,7 +383,7 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
           height: 10,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: active ? Colors.black : Colors.white,
+            color: active ? colors.primary : colors.outlineVariant,
           ),
         );
       }),

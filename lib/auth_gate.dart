@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'telateste.dart';
-import 'LoginScreen.dart';
+import 'screens/telateste.dart';
+import 'screens/LoginScreen.dart';
 
 /// Decide qual tela mostrar conforme o estado de autenticação:
 /// - usuário logado  -> home (WidgetTestScreen)

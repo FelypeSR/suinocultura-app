@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'routes.dart'; // Rotas nomeadas centralizadas
 import 'auth_gate.dart'; // Decide entre login e home
 import 'firebase_options.dart';
+import 'theme/app_theme.dart'; // Tema central Material Design 3
 
 
 
@@ -23,6 +24,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: AppTheme.light, // Tema Material Design 3 (identidade verde)
       // Traduções dos widgets do Material/Cupertino (date picker, etc.)
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,

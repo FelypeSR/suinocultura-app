@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// Regras de segurança do Firestore — projeto "suinobd" (GSPR).
+//
+// As coleções da granja são compartilhadas entre os dispositivos do produtor e
+// só podem ser lidas/escritas por um usuário autenticado (login por e-mail/senha
+// ou conta Google). Tudo o que não estiver explicitamente liberado é bloqueado.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Usuário autenticado em qualquer provedor (e-mail/senha ou Google).
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Rebanho (cadastro de animais)
+    match /animais/{animalId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Estoque de ração
+    match /racoes/{racaoId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Eventos / vacinação
+    match /eventos/{eventoId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Ninhadas / leitegadas
+    match /ninhadas/{ninhadaId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Negação padrão: qualquer outra coleção/documento fica bloqueado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -5,12 +5,14 @@ class AnimalService {
   final CollectionReference _col =
       FirebaseFirestore.instance.collection('animais');
 
-  Future<void> salvar(AnimalModel animal) async {
+  /// Cria ou atualiza um animal e devolve o id do documento.
+  Future<String> salvar(AnimalModel animal) async {
     if (animal.id != null) {
       await _col.doc(animal.id).update(animal.toMap());
-    } else {
-      await _col.add(animal.toMap());
+      return animal.id!;
     }
+    final ref = await _col.add(animal.toMap());
+    return ref.id;
   }
 
   Stream<List<AnimalModel>> listar() {

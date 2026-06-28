@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gspr/screen_base.dart';
-import 'assets/widgets/primary__button.dart';
+import 'package:gspr/assets/widgets/primary__button.dart';
 
 class RecoverScreen extends StatefulWidget {
   const RecoverScreen({super.key});

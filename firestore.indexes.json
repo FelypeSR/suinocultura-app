@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "animais",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "sexo", "order": "ASCENDING" },
+        { "fieldPath": "criadoEm", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

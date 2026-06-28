@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'screen_base.dart';
-import 'routes.dart';
-import 'models/racao_model.dart';
-import 'services/racao_service.dart';
+import 'package:gspr/screen_base.dart';
+import 'package:gspr/routes.dart';
+import 'package:gspr/models/racao_model.dart';
+import 'package:gspr/services/racao_service.dart';
+import 'package:gspr/theme/app_theme.dart';
 
 const _verde = Color(0xFF2E7D32);
 
@@ -391,17 +392,13 @@ class _CadastroRacaoScreenState extends State<CadastroRacaoScreen> {
   Future<void> _salvar() async {
     if (!_formKey.currentState!.validate()) return;
     if (_tipo == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecione o tipo de ração')),
-      );
+      context.showErrorSnackBar('Selecione o tipo de ração');
       return;
     }
 
     final automatico = _modoConsumo == 'automatico';
     if (automatico && _parseNum(_consumoCtrl.text) == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Informe o consumo por dia')),
-      );
+      context.showErrorSnackBar('Informe o consumo por dia');
       return;
     }
 
@@ -420,20 +417,11 @@ class _CadastroRacaoScreenState extends State<CadastroRacaoScreen> {
       );
       await _service.salvar(racao);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Entrada registrada no estoque!'),
-            backgroundColor: _verde,
-          ),
-        );
+        context.showSuccessSnackBar('Entrada registrada no estoque!');
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao salvar: $e')),
-        );
-      }
+      if (mounted) context.showErrorSnackBar('Erro ao salvar: $e');
     } finally {
       if (mounted) setState(() => _salvando = false);
     }

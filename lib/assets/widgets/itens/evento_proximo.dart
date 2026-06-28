@@ -16,95 +16,94 @@ class EventoProximo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF388E3C),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.25),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Título + Ano
-          Row(
-            children: [
-              const Text(
-                'Eventos Próximos',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(width: 3),
-              Text(
-                ano,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
+    final colors = Theme.of(context).colorScheme;
+    final onContainer = colors.onPrimaryContainer;
 
-          const SizedBox(height: 8),
-
-          // Data grande + botão seta
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
+    return Material(
+      color: colors.primaryContainer,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                data,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              GestureDetector(
-                onTap: onTap,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2E7D32),
-                    borderRadius: BorderRadius.circular(8),
+              // Título + Ano
+              Row(
+                children: [
+                  Text(
+                    'Eventos Próximos',
+                    style: TextStyle(
+                      color: onContainer,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.chevron_right,
-                    color: Colors.white,
-                    size: 20,
+                  const SizedBox(width: 3),
+                  Text(
+                    ano,
+                    style: TextStyle(
+                      color: onContainer.withValues(alpha: 0.7),
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
+                ],
+              ),
+
+              const SizedBox(height: 8),
+
+              // Data grande + botão seta
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    data,
+                    style: TextStyle(
+                      color: onContainer,
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: colors.primary,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.chevron_right,
+                      color: colors.onPrimary,
+                      size: 20,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 8),
+
+              // Ícone + descrição do evento
+              Row(
+                children: [
+                  Icon(Icons.push_pin,
+                      color: onContainer.withValues(alpha: 0.7), size: 12),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      descricao,
+                      style: TextStyle(color: onContainer, fontSize: 11),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-
-          const SizedBox(height: 8),
-
-          // Ícone + descrição do evento
-          Row(
-            children: [
-              const Icon(Icons.push_pin, color: Colors.white70, size: 12),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(
-                  descricao,
-                  style: const TextStyle(color: Colors.white, fontSize: 11),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'LoginScreen.dart';
-import 'HomeScreen.dart';
-import 'RecoverScreen.dart';
-import 'CadastroScreen.dart';
-import 'CadastroUsuarioScreen.dart';
-import 'RegistroVacinaScreen.dart';
-import 'EstoqueRacaoScreen.dart';
+import 'screens/LoginScreen.dart';
+import 'screens/HomeScreen.dart';
+import 'screens/RecoverScreen.dart';
+import 'screens/CadastroScreen.dart';
+import 'screens/CadastroNinhadaScreen.dart';
+import 'screens/CadastroUsuarioScreen.dart';
+import 'screens/RegistroVacinaScreen.dart';
+import 'screens/EstoqueRacaoScreen.dart';
 
 /// Rotas nomeadas do app, centralizadas em um único lugar.
 ///
@@ -20,6 +21,7 @@ class Rotas {
   static const String recuperarSenha = '/recuperar-senha';
   static const String painel = '/painel'; // HomeScreen (dashboard/perfil)
   static const String cadastroAnimal = '/cadastro-animal';
+  static const String cadastroNinhada = '/cadastro-ninhada';
   static const String registroVacina = '/registro-vacina';
   static const String estoqueRacao = '/estoque-racao';
   static const String cadastroRacao = '/cadastro-racao';
@@ -33,6 +35,7 @@ class Rotas {
     recuperarSenha: (_) => const RecoverScreen(),
     painel: (_) => const HomeScreen(),
     cadastroAnimal: (_) => const CadastroScreen(),
+    cadastroNinhada: (_) => const CadastroNinhadaScreen(),
     registroVacina: (_) => const RegistroVacinaScreen(),
     estoqueRacao: (_) => EstoqueRacaoScreen(),
     cadastroRacao: (_) => const CadastroRacaoScreen(),

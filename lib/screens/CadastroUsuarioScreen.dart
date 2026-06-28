@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'screen_base.dart';
+import 'package:gspr/screen_base.dart';
+import 'package:gspr/theme/app_theme.dart';
 
 const _verde = Color(0xFF2E7D32);
 
@@ -44,17 +45,14 @@ class _CadastroUsuarioScreenState extends State<CadastroUsuarioScreen> {
       await cred.user?.updateDisplayName(_nomeCtrl.text.trim());
       await cred.user?.reload();
       // Navegação tratada pelo AuthGate após a mudança de estado.
+      if (mounted) context.showSuccessSnackBar('Conta criada com sucesso!');
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_mensagemErro(e.code))),
-      );
+      context.showErrorSnackBar(_mensagemErro(e.code));
       setState(() => _loading = false);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao cadastrar: $e')),
-      );
+      context.showErrorSnackBar('Erro ao cadastrar: $e');
       setState(() => _loading = false);
     }
   }
