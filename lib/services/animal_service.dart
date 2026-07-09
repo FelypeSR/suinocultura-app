@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/animal_model.dart';
+import 'granja_ativa.dart';
 
 class AnimalService {
-  final CollectionReference _col =
-      FirebaseFirestore.instance.collection('animais');
+  // Subcoleção da granja aberta no app (granjas/{id}/animais).
+  CollectionReference get _col => GranjaAtiva.colecao('animais');
 
   /// Cria ou atualiza um animal e devolve o id do documento.
   Future<String> salvar(AnimalModel animal) async {

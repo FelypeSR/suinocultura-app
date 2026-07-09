@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/evento_model.dart';
+import 'granja_ativa.dart';
 
 class EventoService {
-  final CollectionReference _col =
-      FirebaseFirestore.instance.collection('eventos');
+  // Subcoleção da granja aberta no app (granjas/{id}/eventos).
+  CollectionReference get _col => GranjaAtiva.colecao('eventos');
 
   Future<void> salvar(EventoModel evento) async {
     if (evento.id != null) {

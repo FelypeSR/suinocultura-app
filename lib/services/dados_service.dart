@@ -1,15 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'granja_ativa.dart';
 
-/// Limpeza do banco de dados da granja.
+/// Limpeza do banco de dados da granja ATIVA.
 ///
-/// Apaga todos os documentos das coleções de dados do produtor: animais
-/// (incluindo o histórico de coberturas), rações, eventos/vacinações e
-/// ninhadas. O perfil do usuário (`usuarios/{uid}`) e a conta de login
-/// NÃO são afetados — só os registros da granja.
+/// Apaga todos os documentos das subcoleções de dados da granja aberta:
+/// animais (incluindo o histórico de coberturas), rações, eventos/vacinações
+/// e ninhadas. A granja em si (nome, membros), o perfil do usuário
+/// (`usuarios/{uid}`) e a conta de login NÃO são afetados.
 class DadosService {
   final _db = FirebaseFirestore.instance;
 
-  /// Coleções da granja que serão esvaziadas.
+  /// Subcoleções da granja que serão esvaziadas.
   static const _colecoes = ['animais', 'racoes', 'eventos', 'ninhadas'];
 
   /// Apaga todos os dados da granja e devolve o total de registros removidos.
@@ -18,14 +19,14 @@ class DadosService {
 
     // Subcoleção de coberturas de cada animal — precisa ser apagada
     // explicitamente (no Firestore, excluir o pai não remove subcoleções).
-    final animais = await _db.collection('animais').get();
+    final animais = await GranjaAtiva.colecao('animais').get();
     for (final animal in animais.docs) {
       final coberturas = await animal.reference.collection('coberturas').get();
       removidos += await _apagarDocs(coberturas.docs);
     }
 
     for (final nome in _colecoes) {
-      final snap = await _db.collection(nome).get();
+      final snap = await GranjaAtiva.colecao(nome).get();
       removidos += await _apagarDocs(snap.docs);
     }
     return removidos;

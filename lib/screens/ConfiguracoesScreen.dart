@@ -167,6 +167,21 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
             const SizedBox(height: 28),
 
             const Text(
+              'Granja',
+              style: TextStyle(fontSize: 15, color: Colors.black54),
+            ),
+            const SizedBox(height: 8),
+            _OpcaoTile(
+              icone: Icons.group_outlined,
+              titulo: 'Membros da granja',
+              subtitulo: 'Convidar ou remover quem tem acesso',
+              onTap: _limpando
+                  ? null
+                  : () => Navigator.pushNamed(context, Rotas.membrosGranja),
+            ),
+            const SizedBox(height: 28),
+
+            const Text(
               'Dados',
               style: TextStyle(fontSize: 15, color: Colors.black54),
             ),

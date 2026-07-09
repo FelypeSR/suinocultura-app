@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/racao_model.dart';
+import 'granja_ativa.dart';
 
 class RacaoService {
-  final CollectionReference _col =
-      FirebaseFirestore.instance.collection('racoes');
+  // Subcoleção da granja aberta no app (granjas/{id}/racoes).
+  CollectionReference get _col => GranjaAtiva.colecao('racoes');
 
   Future<void> salvar(RacaoModel racao) async {
     if (racao.id != null) {
