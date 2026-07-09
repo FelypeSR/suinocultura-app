@@ -70,6 +70,22 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
   /// Cor do conteúdo sobre o card verde.
   Color get _onCard => Theme.of(context).colorScheme.onPrimary;
 
+  /// Preenche o espaço restante do card com [child] em tamanho natural,
+  /// encolhendo-o proporcionalmente quando a tela é baixa demais (evita
+  /// overflow em celulares de resolução menor).
+  Widget _conteudoAdaptavel(Widget child,
+      {Alignment alignment = Alignment.topCenter}) {
+    return Expanded(
+      child: LayoutBuilder(
+        builder: (context, c) => FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: alignment,
+          child: SizedBox(width: c.maxWidth, child: child),
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -108,60 +124,69 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _cabecalho('RESUMO'),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _infoTexto('Estoque: ${widget.estoqueKg.toStringAsFixed(0)} kgs.'),
-                  const SizedBox(height: 12),
-                  _infoTexto('Rebanho: ${widget.rebanho}.'),
-                  const SizedBox(height: 12),
-                  _infoTexto('Leitões: ${widget.leitoes}.'),
-                  const SizedBox(height: 12),
-                  _infoTexto('Registro: ${widget.dataRegistro}.'),
-                ],
-              ),
-              Column(
-                children: [
-                  Text(
-                    'Estoque de ração',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: _onCard,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Stack(
-                    alignment: Alignment.center,
+          const SizedBox(height: 16),
+          _conteudoAdaptavel(
+            alignment: Alignment.topLeft,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Expanded + FittedBox por linha: em telas estreitas o texto
+                // encolhe em vez de estourar sobre o gauge.
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(
-                        width: 96,
-                        height: 96,
-                        child: CircularProgressIndicator(
-                          value: widget.percentualRacao,
-                          strokeWidth: 8,
-                          backgroundColor: _onCard.withValues(alpha: 0.25),
-                          color: _onCard,
-                        ),
-                      ),
-                      Text(
-                        '${(widget.percentualRacao * 100).toStringAsFixed(0)}%',
-                        style: TextStyle(
-                          color: _onCard,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                        ),
-                      ),
+                      _infoTexto(
+                          'Estoque: ${widget.estoqueKg.toStringAsFixed(0)} kgs.'),
+                      const SizedBox(height: 12),
+                      _infoTexto('Rebanho: ${widget.rebanho}.'),
+                      const SizedBox(height: 12),
+                      _infoTexto('Leitões: ${widget.leitoes}.'),
+                      const SizedBox(height: 12),
+                      _infoTexto('Registro: ${widget.dataRegistro}.'),
                     ],
                   ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  children: [
+                    Text(
+                      'Estoque de ração',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: _onCard,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 96,
+                          height: 96,
+                          child: CircularProgressIndicator(
+                            value: widget.percentualRacao,
+                            strokeWidth: 8,
+                            backgroundColor: _onCard.withValues(alpha: 0.25),
+                            color: _onCard,
+                          ),
+                        ),
+                        Text(
+                          '${(widget.percentualRacao * 100).toStringAsFixed(0)}%',
+                          style: TextStyle(
+                            color: _onCard,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -179,23 +204,30 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
         children: [
           _cabecalho('LEITÕES'),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _statCard(Icons.child_care, '${widget.nascimentos}', 'Nascimentos'),
-              _statCard(Icons.directions_run, '${widget.desmames}', 'Desmames'),
-              _statCard(Icons.warning_amber_rounded, '${widget.mortalidade}', 'Mortalidade'),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Center(
-            child: Text(
-              'Total no plantel: ${widget.leitoes}',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: _onCard,
-              ),
+          _conteudoAdaptavel(
+            Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _statCard(
+                        Icons.child_care, '${widget.nascimentos}', 'Nascimentos'),
+                    _statCard(
+                        Icons.directions_run, '${widget.desmames}', 'Desmames'),
+                    _statCard(Icons.warning_amber_rounded,
+                        '${widget.mortalidade}', 'Mortalidade'),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Total no plantel: ${widget.leitoes}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: _onCard,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -214,24 +246,31 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
         children: [
           _cabecalho('COBERTURA'),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _statCard(Icons.favorite, '${widget.emCobertura}', 'Em cobertura'),
-              // Ícone de porco (cofrinho/leitoa) no lugar da gestante humana.
-              _statCard(Icons.savings, '${widget.gestantes}', 'Gestantes'),
-              _statCard(Icons.child_friendly, '${widget.emAleitamento}', 'Aleitamento'),
-            ],
-          ),
-          const Spacer(),
-          Center(
-            child: Text(
-              'Rebanho total: ${widget.rebanho}',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: _onCard,
-              ),
+          _conteudoAdaptavel(
+            Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _statCard(
+                        Icons.favorite, '${widget.emCobertura}', 'Em cobertura'),
+                    // Ícone de porco (cofrinho/leitoa) no lugar da gestante
+                    // humana.
+                    _statCard(Icons.savings, '${widget.gestantes}', 'Gestantes'),
+                    _statCard(Icons.child_friendly, '${widget.emAleitamento}',
+                        'Aleitamento'),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Rebanho total: ${widget.rebanho}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: _onCard,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -326,7 +365,7 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
         ),
         const SizedBox(width: 6),
         Text(
-          '2026',
+          '${DateTime.now().year}',
           style: TextStyle(
             fontSize: 12,
             color: _onCard.withValues(alpha: 0.7),
@@ -338,12 +377,17 @@ class _ResumodeEventosState extends State<ResumodeEventos> {
   }
 
   Widget _infoTexto(String texto) {
-    return Text(
-      texto,
-      style: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w900,
-        color: _onCard,
+    // FittedBox: em telas estreitas o texto encolhe em vez de quebrar linha.
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Text(
+        texto,
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w900,
+          color: _onCard,
+        ),
       ),
     );
   }

@@ -16,6 +16,12 @@ service cloud.firestore {
     // Rebanho (cadastro de animais)
     match /animais/{animalId} {
       allow read, write: if isSignedIn();
+
+      // Histórico de coberturas do reprodutor (subcoleção). O match do
+      // documento acima NÃO alcança subcoleções, então precisa ser explícito.
+      match /coberturas/{coberturaId} {
+        allow read, write: if isSignedIn();
+      }
     }
 
     // Estoque de ração
@@ -31,6 +37,12 @@ service cloud.firestore {
     // Ninhadas / leitegadas
     match /ninhadas/{ninhadaId} {
       allow read, write: if isSignedIn();
+    }
+
+    // Perfil do usuário (foto etc.): cada um só escreve no próprio documento.
+    match /usuarios/{uid} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == uid;
     }
 
     // Negação padrão: qualquer outra coleção/documento fica bloqueado.

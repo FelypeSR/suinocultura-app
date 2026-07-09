@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// Tema central do app (Material Design 3).
 ///
@@ -97,14 +96,13 @@ class AppTheme {
       brightness: Brightness.light,
     );
 
-    // Tipografia: Poppins dá um ar amigável e moderno, combinando com o app.
-    final baseTextTheme = GoogleFonts.poppinsTextTheme();
-
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: colorScheme.surface,
-      textTheme: baseTextTheme,
+      // Tipografia: Poppins dá um ar amigável e moderno, combinando com o app.
+      // Fonte embarcada nos assets (pubspec) — nada é baixado em runtime.
+      fontFamily: 'Poppins',
       visualDensity: VisualDensity.adaptivePlatformDensity,
 
       // Botões preenchidos (ação primária).
@@ -112,7 +110,8 @@ class AppTheme {
         style: FilledButton.styleFrom(
           minimumSize: const Size(64, 52),
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-          textStyle: GoogleFonts.poppins(
+          textStyle: const TextStyle(
+            fontFamily: 'Poppins',
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -127,7 +126,8 @@ class AppTheme {
           foregroundColor: colorScheme.onPrimary,
           minimumSize: const Size(64, 52),
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-          textStyle: GoogleFonts.poppins(
+          textStyle: const TextStyle(
+            fontFamily: 'Poppins',
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -139,7 +139,7 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: colorScheme.primary,
-          textStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600),
         ),
       ),
 

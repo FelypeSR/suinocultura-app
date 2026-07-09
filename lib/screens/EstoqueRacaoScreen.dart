@@ -16,13 +16,15 @@ class EstoqueRacaoScreen extends StatelessWidget {
   EstoqueRacaoScreen({super.key});
 
   final _service = RacaoService();
+  // Stream criada uma vez: rebuilds não reabrem a consulta no Firestore.
+  late final _racoes = _service.listar();
 
   @override
   Widget build(BuildContext context) {
     return BaseScreen(
       title: 'Estoque',
       child: StreamBuilder<List<RacaoModel>>(
-        stream: _service.listar(),
+        stream: _racoes,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(

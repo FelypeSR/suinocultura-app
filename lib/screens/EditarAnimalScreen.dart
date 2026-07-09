@@ -23,6 +23,8 @@ class EditarAnimalScreen extends StatefulWidget {
 
 class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
   final _service = AnimalService();
+  // Stream criada uma vez: rebuilds não reabrem a consulta no Firestore.
+  late final _animais = _service.listar();
   final _dataFmt = DateFormat('dd/MM/yyyy');
 
   // Filtro por sexo: null = todos.
@@ -69,7 +71,7 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
             child: StreamBuilder<List<AnimalModel>>(
               // Lista geral e filtra por sexo em memória — evita exigir
               // índice composto no Firestore (where + orderBy).
-              stream: _service.listar(),
+              stream: _animais,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
@@ -180,17 +182,35 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
                   style: TextStyle(color: Colors.black54),
                 ),
               )
-            else if (animal.isFemea) ...[
-              ListTile(
-                leading: const Icon(Icons.pregnant_woman, color: _verde),
-                title: Text(animal.gestante
-                    ? 'Atualizar gestação'
-                    : 'Transformar em gestante'),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  _dialogGestante(animal);
-                },
-              ),
+            else if (animal.morto)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Este animal morreu (perda registrada).',
+                  style: TextStyle(color: Colors.black54),
+                ),
+              )
+            else ...[
+              if (animal.isFemea)
+                ListTile(
+                  leading: const Icon(Icons.pregnant_woman, color: _verde),
+                  title: Text(animal.gestante
+                      ? 'Atualizar gestação'
+                      : 'Transformar em gestante'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _dialogGestante(animal);
+                  },
+                )
+              else
+                ListTile(
+                  leading: const Icon(Icons.favorite, color: _verde),
+                  title: const Text('Registrar cobertura'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _dialogCobertura(animal);
+                  },
+                ),
               ListTile(
                 leading: const Icon(Icons.sell, color: _verde),
                 title: const Text('Registrar venda'),
@@ -199,21 +219,40 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
                   _dialogVenda(animal);
                 },
               ),
-            ] else ...[
+              // Doença: registrar/atualizar e, quando doente, concluir o
+              // tratamento.
               ListTile(
-                leading: const Icon(Icons.favorite, color: _verde),
-                title: const Text('Registrar cobertura'),
+                leading: const Icon(Icons.healing, color: _verde),
+                title: Text(animal.doente
+                    ? 'Atualizar doença'
+                    : 'Registrar doença'),
+                subtitle: animal.doente && animal.doenca != null
+                    ? Text(animal.doenca!,
+                        maxLines: 1, overflow: TextOverflow.ellipsis)
+                    : null,
                 onTap: () {
                   Navigator.pop(sheetContext);
-                  _dialogCobertura(animal);
+                  _dialogDoenca(animal);
                 },
               ),
+              if (animal.doente)
+                ListTile(
+                  leading: const Icon(Icons.task_alt, color: _verde),
+                  title: const Text('Concluir tratamento'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _dialogConcluirTratamento(animal);
+                  },
+                ),
+              // Perda (morte do animal).
               ListTile(
-                leading: const Icon(Icons.sell, color: _verde),
-                title: const Text('Registrar venda'),
+                leading:
+                    const Icon(Icons.heart_broken_outlined, color: Colors.red),
+                title: const Text('Registrar perda',
+                    style: TextStyle(color: Colors.red)),
                 onTap: () {
                   Navigator.pop(sheetContext);
-                  _dialogVenda(animal);
+                  _dialogPerda(animal);
                 },
               ),
             ],
@@ -265,7 +304,7 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
                   StreamBuilder<List<AnimalModel>>(
                     // Lista geral e filtra machos em memória — evita exigir
                     // índice composto no Firestore (where + orderBy).
-                    stream: _service.listar(),
+                    stream: _animais,
                     builder: (context, snap) {
                       if (snap.connectionState == ConnectionState.waiting) {
                         return const Padding(
@@ -649,6 +688,401 @@ class _EditarAnimalScreenState extends State<EditarAnimalScreen> {
     );
   }
 
+  // ----------------------------------------------------------------------
+  // Ação: registrar/atualizar doença
+  // ----------------------------------------------------------------------
+  Future<void> _dialogDoenca(AnimalModel animal) async {
+    // Pré-preenche com a doença atual quando está atualizando.
+    final doencaCtrl = TextEditingController(text: animal.doenca ?? '');
+    final tratamentoCtrl = TextEditingController(text: animal.tratamento ?? '');
+    bool emTratamento = animal.doente ? animal.emTratamento : true;
+    DateTime? data = animal.doente ? animal.dataDoenca : DateTime.now();
+    bool salvando = false;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (sheetContext, setSheet) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                20,
+                20,
+                20 + MediaQuery.of(sheetContext).viewInsets.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                      animal.doente
+                          ? 'Atualizar doença'
+                          : 'Registrar doença',
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  const Text('Doença'),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: doencaCtrl,
+                    decoration: const InputDecoration(
+                        hintText: 'Qual a doença? (ex.: pneumonia)'),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Tratamento'),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: tratamentoCtrl,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      hintText:
+                          'Descreva o tratamento (medicação, dose, duração…)',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Se o animal já está sendo tratado no momento.
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    activeThumbColor: _verde,
+                    title: const Text('Em tratamento'),
+                    value: emTratamento,
+                    onChanged: (v) => setSheet(() => emTratamento = v),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('Data do registro'),
+                  const SizedBox(height: 6),
+                  _SeletorData(
+                    data: data,
+                    placeholder: 'Selecionar data',
+                    onTap: () async {
+                      final d = await _escolherData(data);
+                      if (d != null) setSheet(() => data = d);
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: salvando
+                          ? null
+                          : () async {
+                              final doenca = doencaCtrl.text.trim();
+                              final tratamento = tratamentoCtrl.text.trim();
+                              if (doenca.isEmpty) {
+                                sheetContext
+                                    .showErrorSnackBar('Informe a doença');
+                                return;
+                              }
+                              if (data == null) {
+                                sheetContext
+                                    .showErrorSnackBar('Selecione a data');
+                                return;
+                              }
+                              setSheet(() => salvando = true);
+                              try {
+                                await _service.registrarDoenca(
+                                  animal.id!,
+                                  doenca: doenca,
+                                  tratamento: tratamento,
+                                  emTratamento: emTratamento,
+                                  data: data!,
+                                );
+                                if (!mounted) return;
+                                Navigator.pop(context);
+                                context.showSuccessSnackBar(
+                                    'Doença registrada!');
+                              } catch (e) {
+                                setSheet(() => salvando = false);
+                                if (sheetContext.mounted) {
+                                  sheetContext
+                                      .showErrorSnackBar('Erro ao salvar: $e');
+                                }
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _verde,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: salvando
+                          ? const LoadingBolinhas(
+                              dotSize: 7,
+                              cores: [Colors.white, Color(0xFFF8BBD0)],
+                            )
+                          : const Text('Confirmar',
+                              style: TextStyle(
+                                  color: Colors.white, fontSize: 16)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    doencaCtrl.dispose();
+    tratamentoCtrl.dispose();
+  }
+
+  // ----------------------------------------------------------------------
+  // Ação: concluir tratamento (animal volta a 'ativo')
+  // ----------------------------------------------------------------------
+  Future<void> _dialogConcluirTratamento(AnimalModel animal) async {
+    DateTime? data = DateTime.now();
+    bool salvando = false;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (sheetContext, setSheet) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                20,
+                20,
+                20 + MediaQuery.of(sheetContext).viewInsets.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Concluir tratamento',
+                      style: TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  // Resumo da doença/tratamento em andamento.
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F8E9),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _verde.withValues(alpha: 0.4)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Doença: ${animal.doenca ?? '—'}',
+                            style: const TextStyle(color: Colors.black87)),
+                        if ((animal.tratamento ?? '').trim().isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text('Tratamento: ${animal.tratamento}',
+                              style: const TextStyle(color: Colors.black87)),
+                        ],
+                        if (animal.dataDoenca != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                              'Registrada em: '
+                              '${_dataFmt.format(animal.dataDoenca!)}',
+                              style: const TextStyle(color: Colors.black54)),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Data da conclusão'),
+                  const SizedBox(height: 6),
+                  _SeletorData(
+                    data: data,
+                    placeholder: 'Selecionar data',
+                    onTap: () async {
+                      final d = await _escolherData(data);
+                      if (d != null) setSheet(() => data = d);
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: salvando
+                          ? null
+                          : () async {
+                              if (data == null) {
+                                sheetContext
+                                    .showErrorSnackBar('Selecione a data');
+                                return;
+                              }
+                              setSheet(() => salvando = true);
+                              try {
+                                await _service.concluirTratamento(
+                                    animal.id!, data: data!);
+                                if (!mounted) return;
+                                Navigator.pop(context);
+                                context.showSuccessSnackBar(
+                                    'Tratamento concluído!');
+                              } catch (e) {
+                                setSheet(() => salvando = false);
+                                if (sheetContext.mounted) {
+                                  sheetContext
+                                      .showErrorSnackBar('Erro ao salvar: $e');
+                                }
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _verde,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: salvando
+                          ? const LoadingBolinhas(
+                              dotSize: 7,
+                              cores: [Colors.white, Color(0xFFF8BBD0)],
+                            )
+                          : const Text('Concluir',
+                              style: TextStyle(
+                                  color: Colors.white, fontSize: 16)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ----------------------------------------------------------------------
+  // Ação: registrar perda (morte do animal)
+  // ----------------------------------------------------------------------
+  Future<void> _dialogPerda(AnimalModel animal) async {
+    final causaCtrl = TextEditingController();
+    DateTime? data = DateTime.now();
+    bool salvando = false;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (sheetContext, setSheet) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                20,
+                20,
+                20 + MediaQuery.of(sheetContext).viewInsets.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Registrar perda',
+                      style: TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text(
+                    'O animal ${animal.codigo} será marcado como morto. '
+                    'Essa ação não pode ser desfeita pelo app.',
+                    style: const TextStyle(color: Colors.black54),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Causa da morte'),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: causaCtrl,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                        hintText: 'Ex.: doença, acidente, causa desconhecida'),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Data da morte'),
+                  const SizedBox(height: 6),
+                  _SeletorData(
+                    data: data,
+                    placeholder: 'Selecionar data',
+                    onTap: () async {
+                      final d = await _escolherData(data);
+                      if (d != null) setSheet(() => data = d);
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: salvando
+                          ? null
+                          : () async {
+                              final causa = causaCtrl.text.trim();
+                              if (causa.isEmpty) {
+                                sheetContext.showErrorSnackBar(
+                                    'Informe a causa da morte');
+                                return;
+                              }
+                              if (data == null) {
+                                sheetContext
+                                    .showErrorSnackBar('Selecione a data');
+                                return;
+                              }
+                              setSheet(() => salvando = true);
+                              try {
+                                await _service.registrarPerda(
+                                  animal.id!,
+                                  causa: causa,
+                                  data: data!,
+                                );
+                                if (!mounted) return;
+                                Navigator.pop(context);
+                                context.showSuccessSnackBar(
+                                    'Perda registrada.');
+                              } catch (e) {
+                                setSheet(() => salvando = false);
+                                if (sheetContext.mounted) {
+                                  sheetContext
+                                      .showErrorSnackBar('Erro ao salvar: $e');
+                                }
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: salvando
+                          ? const LoadingBolinhas(
+                              dotSize: 7,
+                              cores: [Colors.white, Color(0xFFF8BBD0)],
+                            )
+                          : const Text('Confirmar perda',
+                              style: TextStyle(
+                                  color: Colors.white, fontSize: 16)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    causaCtrl.dispose();
+  }
+
   Future<DateTime?> _escolherData(DateTime? atual) {
     final hoje = DateTime.now();
     return showDatePicker(
@@ -706,16 +1140,22 @@ class _FiltroChip extends StatelessWidget {
   }
 }
 
-/// Etiqueta de status (gestante / vendido). Animais ativos não exibem nada.
+/// Etiqueta de status (gestante / vendido / doente / morto). Animais ativos
+/// não exibem nada.
 class _StatusBadge extends StatelessWidget {
   final String status;
   const _StatusBadge({required this.status});
 
   @override
   Widget build(BuildContext context) {
-    if (status == 'ativo') return const SizedBox.shrink();
-    final bool vendido = status == 'vendido';
-    final cor = vendido ? Colors.grey : const Color(0xFFEF6C00);
+    final (String? label, Color cor) = switch (status) {
+      'vendido' => ('Vendido', Colors.grey),
+      'gestante' => ('Gestante', const Color(0xFFEF6C00)),
+      'doente' => ('Em tratamento', const Color(0xFFC62828)),
+      'morto' => ('Perda', Colors.black54),
+      _ => (null, Colors.grey),
+    };
+    if (label == null) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -723,7 +1163,7 @@ class _StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        vendido ? 'Vendido' : 'Gestante',
+        label,
         style: TextStyle(
             color: cor, fontSize: 12, fontWeight: FontWeight.w600),
       ),

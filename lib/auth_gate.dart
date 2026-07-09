@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'screens/telateste.dart';
 import 'screens/LoginScreen.dart';
-import 'assets/widgets/loading_bolinhas.dart';
+import 'screens/SplashScreen.dart';
 
 /// Decide qual tela mostrar conforme o estado de autenticação:
 /// - usuário logado  -> home (WidgetTestScreen)
@@ -19,9 +19,8 @@ class AuthGate extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: LoadingBolinhas()),
-          );
+          // Mesma splash do boot: a abertura fica contínua, sem "pulo" visual.
+          return const SplashScreen();
         }
         if (snapshot.hasData) {
           return const WidgetTestScreen();

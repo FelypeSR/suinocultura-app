@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'logout_button.dart';
+import 'itens/foto_perfil.dart';
 
 // HideBar é o painel lateral deslizante (drawer customizado).
 // Ele envolve qualquer tela filha e adiciona um botão (⋮) no canto superior
@@ -75,6 +76,10 @@ class HideBarState extends State<HideBar> with SingleTickerProviderStateMixin {
   void open() => _open();
 
   void _open() {
+    // Tira o foco do que estiver ativo (ex.: barra de pesquisa) antes de
+    // abrir: fecha o teclado e o painel de resultados, que é desenhado no
+    // Overlay do app e ficaria sobreposto à sidebar.
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _isOpen = true);
     _controller.forward(); // executa a animação de entrada
   }
@@ -176,19 +181,9 @@ class HideBarState extends State<HideBar> with SingleTickerProviderStateMixin {
 
               const SizedBox(height: 8),
 
-              // Foto de perfil em círculo.
-              // Se photoUrl estiver preenchido (login via Google), carrega a
-              // imagem da internet. Caso contrário, exibe o ícone genérico.
-              CircleAvatar(
-                radius: 36,
-                backgroundColor: Colors.grey.shade200,
-                backgroundImage: widget.photoUrl != null
-                    ? NetworkImage(widget.photoUrl!)
-                    : null,
-                child: widget.photoUrl == null
-                    ? const Icon(Icons.person, size: 36, color: Colors.grey)
-                    : null,
-              ),
+              // Foto de perfil em círculo: a enviada no app (Firestore) tem
+              // prioridade; senão a da conta (photoUrl); senão o ícone.
+              FotoPerfil(radius: 36, photoUrl: widget.photoUrl),
 
               const SizedBox(height: 10),
 

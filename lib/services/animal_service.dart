@@ -74,6 +74,51 @@ class AnimalService {
     });
   }
 
+  /// Registra uma doença no animal (status 'doente'), com a descrição do
+  /// tratamento e se ele já está em tratamento. Também serve para atualizar
+  /// os dados de uma doença já registrada.
+  Future<void> registrarDoenca(
+    String id, {
+    required String doenca,
+    required String tratamento,
+    required bool emTratamento,
+    required DateTime data,
+  }) async {
+    await _col.doc(id).update({
+      'status': 'doente',
+      'doenca': doenca,
+      'tratamento': tratamento,
+      'emTratamento': emTratamento,
+      'dataDoenca': Timestamp.fromDate(data),
+      // Reabrir uma doença limpa a conclusão anterior.
+      'dataFimTratamento': FieldValue.delete(),
+    });
+  }
+
+  /// Conclui o tratamento: o animal volta a 'ativo' e os dados da doença
+  /// ficam como histórico, com a data de conclusão registrada.
+  Future<void> concluirTratamento(String id, {required DateTime data}) async {
+    await _col.doc(id).update({
+      'status': 'ativo',
+      'emTratamento': false,
+      'dataFimTratamento': Timestamp.fromDate(data),
+    });
+  }
+
+  /// Registra a perda (morte) do animal: status 'morto', com causa e data.
+  Future<void> registrarPerda(
+    String id, {
+    required String causa,
+    required DateTime data,
+  }) async {
+    await _col.doc(id).update({
+      'status': 'morto',
+      'causaMorte': causa,
+      'dataMorte': Timestamp.fromDate(data),
+      'emTratamento': false,
+    });
+  }
+
   /// Registra uma cobertura feita por um macho (subcoleção 'coberturas'),
   /// usada para contar o nº de coberturas / fertilidade do reprodutor.
   Future<void> registrarCobertura(String machoId, DateTime data) async {

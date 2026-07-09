@@ -19,7 +19,6 @@ dependencies:
   firebase_auth: ^6.4.0
   google_sign_in: ^6.2.0
   cloud_firestore: ^6.3.0
-  google_fonts: ^6.1.0
   flutter_svg: ^2.0.7
   table_calendar: ^3.0.9
   intl: ^0.20.2
@@ -27,6 +26,7 @@ dependencies:
   # Geração e visualização/impressão de relatórios em PDF
   pdf: ^3.11.0
   printing: ^5.13.0
+  image_picker: ^1.2.3
 
 dev_dependencies:
   flutter_test:
@@ -54,3 +54,17 @@ flutter:
     - lib/assets/widgets/itens/google.png
     - lib/assets/widgets/itens/recover.png
     - lib/assets/widgets/itens/iconapp.png
+
+  # Poppins embarcada no app: sem download em tempo de execução (o texto
+  # renderiza certo já na primeira abertura, mesmo sem internet).
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700

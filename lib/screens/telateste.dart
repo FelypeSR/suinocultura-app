@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gspr/assets/widgets/itens/navbar.dart'; // NavBar
@@ -14,6 +16,7 @@ import 'package:gspr/models/evento_model.dart';
 import 'package:gspr/services/evento_service.dart';
 import 'package:gspr/services/relatorio_pdf_service.dart'; // Relatório em PDF
 import 'package:gspr/assets/widgets/hide_bar.dart'; // Painel lateral
+import 'package:gspr/assets/widgets/itens/foto_perfil.dart'; // Avatar do usuário
 
 /// Tela inicial do app (home): cabeçalho com saudação, busca,
 /// eventos próximos e o carrossel de resumo. Abaixo, a navbar flutuante.
@@ -67,17 +70,10 @@ class _WidgetTestScreenState extends State<WidgetTestScreen> {
   }
 
   /// Formata uma data como dd/MM (ex.: 24/10).
-  String _formatarDiaMes(DateTime d) {
-    final dia = d.day.toString().padLeft(2, '0');
-    final mes = d.month.toString().padLeft(2, '0');
-    return '$dia/$mes';
-  }
+  String _formatarDiaMes(DateTime d) => fmtDiaMes(d);
 
   /// Descrição curta de um evento para o card (usa o tipo de vacina quando há).
-  String _descricaoEvento(EventoModel e) {
-    if (e.tipoVacina.trim().isNotEmpty) return 'Vacina: ${e.tipoVacina.trim()}';
-    return 'Dia de vacinação';
-  }
+  String _descricaoEvento(EventoModel e) => descricaoEvento(e);
 
   /// Monta o carrossel de resumo a partir das listas do Firestore. Todos os
   /// números são calculados aqui; o card de anotações reúne as observações
@@ -88,40 +84,9 @@ class _WidgetTestScreenState extends State<WidgetTestScreen> {
     List<NinhadaModel> ninhadas,
     List<EventoModel> eventos,
   ) {
-    // Anotações: observações salvas em cada cadastro.
-    final anotacoes = <Anotacao>[];
-    for (final r in racoes) {
-      if (r.observacao.trim().isNotEmpty) {
-        anotacoes.add(Anotacao(
-          origem: 'Estoque • ${r.tipo}',
-          texto: r.observacao.trim(),
-        ));
-      }
-    }
-    for (final a in animais) {
-      if (a.saude.trim().isNotEmpty) {
-        anotacoes.add(Anotacao(
-          origem: 'Animal ${a.codigo}',
-          texto: a.saude.trim(),
-        ));
-      }
-    }
-    for (final n in ninhadas) {
-      if (n.observacao.trim().isNotEmpty) {
-        anotacoes.add(Anotacao(
-          origem: 'Ninhada • mãe ${n.maeCodigo}',
-          texto: n.observacao.trim(),
-        ));
-      }
-    }
-    for (final e in eventos) {
-      if (e.observacoes.trim().isNotEmpty) {
-        final origem = e.tipoVacina.trim().isNotEmpty
-            ? 'Vacina • ${e.tipoVacina.trim()}'
-            : 'Vacina • ${_formatarDiaMes(e.data)}';
-        anotacoes.add(Anotacao(origem: origem, texto: e.observacoes.trim()));
-      }
-    }
+    // Anotações: observações salvas em cada cadastro (reunidas de todos os
+    // formulários — estoque, animal, ninhada e vacina/evento).
+    final anotacoes = coletarAnotacoes(racoes, animais, ninhadas, eventos);
 
     // Estoque total em kg: somamos o saldo de todas as entradas em kg
     // (sacos não entram).
@@ -178,7 +143,8 @@ class _WidgetTestScreenState extends State<WidgetTestScreen> {
 
     return ResumodeEventos(
       estoqueKg: estoqueKg,
-      rebanho: animais.length,
+      // Mortos ficam fora do rebanho (vendidos seguem contando, como antes).
+      rebanho: animais.where((a) => !a.morto).length,
       leitoes: leitoes,
       dataRegistro: dataRegistro,
       percentualRacao: percentual,
@@ -334,7 +300,8 @@ class _WidgetTestScreenState extends State<WidgetTestScreen> {
       userEmail: user?.email ?? '',
       photoUrl: user?.photoURL,
       onLogout: () => FirebaseAuth.instance.signOut(),
-      onEditarPerfil: () {},
+      onEditarPerfil: () =>
+          Navigator.pushNamed(context, Rotas.editarPerfil),
       onAtividades: () {},
       onConfiguracoes: () {},
       onGerenciarDados: _abrirMenuCadastros,
@@ -354,8 +321,15 @@ class _WidgetTestScreenState extends State<WidgetTestScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Barra de pesquisa de funções do app
-                  _BuscaFuncoes(onGerarRelatorio: _gerarRelatorioPdf),
+                  // Barra de pesquisa global (funções, animais, eventos e
+                  // anotações)
+                  _BuscaGlobal(
+                    racoes: _racoes,
+                    animais: _animais,
+                    ninhadas: _ninhadas,
+                    eventos: _eventos,
+                    onGerarRelatorio: _gerarRelatorioPdf,
+                  ),
                   const SizedBox(height: 28),
 
                   // Dois cards de eventos próximos lado a lado, vindos do
@@ -487,16 +461,9 @@ class _HomeHeader extends StatelessWidget {
             children: [
               Row(
             children: [
-              // Foto de perfil
-              CircleAvatar(
-                radius: 42,
-                backgroundColor: Colors.white,
-                backgroundImage: foto != null ? NetworkImage(foto) : null,
-                child: foto == null
-                    ? const Icon(Icons.person,
-                        color: Color(0xFF3BA135), size: 46)
-                    : null,
-              ),
+              // Foto de perfil (a enviada no app tem prioridade; senão a da
+              // conta Google; senão o ícone genérico).
+              FotoPerfil(radius: 42, photoUrl: foto),
               const SizedBox(width: 16),
               // Saudação
               Expanded(
@@ -638,27 +605,106 @@ class _EventoVazio extends StatelessWidget {
   }
 }
 
-/// Uma função do app que pode ser encontrada pela busca.
-class _Funcao {
-  final String nome;
+/// Formata uma data como dd/MM (ex.: 24/10).
+String fmtDiaMes(DateTime d) {
+  final dia = d.day.toString().padLeft(2, '0');
+  final mes = d.month.toString().padLeft(2, '0');
+  return '$dia/$mes';
+}
+
+/// Descrição curta de um evento (usa o tipo de vacina quando há).
+String descricaoEvento(EventoModel e) {
+  if (e.tipoVacina.trim().isNotEmpty) return 'Vacina: ${e.tipoVacina.trim()}';
+  return 'Dia de vacinação';
+}
+
+/// Reúne as observações de TODOS os formulários (estoque, animal, ninhada e
+/// vacina/evento) numa única lista de anotações. Usado tanto pelo carrossel de
+/// resumo quanto pela busca global.
+List<Anotacao> coletarAnotacoes(
+  List<RacaoModel> racoes,
+  List<AnimalModel> animais,
+  List<NinhadaModel> ninhadas,
+  List<EventoModel> eventos,
+) {
+  final anotacoes = <Anotacao>[];
+  for (final r in racoes) {
+    if (r.observacao.trim().isNotEmpty) {
+      anotacoes.add(
+          Anotacao(origem: 'Estoque • ${r.tipo}', texto: r.observacao.trim()));
+    }
+  }
+  for (final a in animais) {
+    if (a.saude.trim().isNotEmpty) {
+      anotacoes
+          .add(Anotacao(origem: 'Animal ${a.codigo}', texto: a.saude.trim()));
+    }
+  }
+  for (final n in ninhadas) {
+    if (n.observacao.trim().isNotEmpty) {
+      anotacoes.add(Anotacao(
+          origem: 'Ninhada • mãe ${n.maeCodigo}', texto: n.observacao.trim()));
+    }
+  }
+  for (final e in eventos) {
+    if (e.observacoes.trim().isNotEmpty) {
+      final origem = e.tipoVacina.trim().isNotEmpty
+          ? 'Vacina • ${e.tipoVacina.trim()}'
+          : 'Vacina • ${fmtDiaMes(e.data)}';
+      anotacoes.add(Anotacao(origem: origem, texto: e.observacoes.trim()));
+    }
+  }
+  return anotacoes;
+}
+
+/// Um resultado da busca: pode ser uma função/tela do app ou um dado
+/// (animal, evento, anotação). Ao tocar, executa [abrir].
+class _Resultado {
+  final String titulo;
+  final String? subtitulo;
   final IconData icone;
   final void Function(BuildContext context) abrir;
-  const _Funcao(this.nome, this.icone, this.abrir);
+  const _Resultado({
+    required this.titulo,
+    this.subtitulo,
+    required this.icone,
+    required this.abrir,
+  });
 }
 
-/// Barra de busca que pesquisa **apenas as funções/telas do app** (não busca
-/// dados como animais ou rações). Ao digitar, mostra uma lista filtrada logo
-/// abaixo do campo; tocar em um resultado abre a função correspondente.
-class _BuscaFuncoes extends StatefulWidget {
+/// Um grupo de resultados da busca (ex.: "Funções", "Animais").
+class _Secao {
+  final String titulo;
+  final List<_Resultado> itens;
+  const _Secao(this.titulo, this.itens);
+}
+
+/// Barra de busca global: pesquisa as funções/telas do app e também os dados —
+/// animais (por código ou raça), eventos/vacinas e anotações. Ao digitar,
+/// mostra os resultados agrupados num painel logo abaixo do campo; tocar em um
+/// resultado abre a tela correspondente (ou exibe o texto, no caso de anotação).
+class _BuscaGlobal extends StatefulWidget {
+  final Stream<List<RacaoModel>> racoes;
+  final Stream<List<AnimalModel>> animais;
+  final Stream<List<NinhadaModel>> ninhadas;
+  final Stream<List<EventoModel>> eventos;
+
   /// Ação da função "Gerar relatório PDF" (vive no state da home).
   final VoidCallback onGerarRelatorio;
-  const _BuscaFuncoes({required this.onGerarRelatorio});
+
+  const _BuscaGlobal({
+    required this.racoes,
+    required this.animais,
+    required this.ninhadas,
+    required this.eventos,
+    required this.onGerarRelatorio,
+  });
 
   @override
-  State<_BuscaFuncoes> createState() => _BuscaFuncoesState();
+  State<_BuscaGlobal> createState() => _BuscaGlobalState();
 }
 
-class _BuscaFuncoesState extends State<_BuscaFuncoes> {
+class _BuscaGlobalState extends State<_BuscaGlobal> {
   static const _verde = Color(0xFF2E7D32);
 
   final _controller = TextEditingController();
@@ -666,23 +712,47 @@ class _BuscaFuncoesState extends State<_BuscaFuncoes> {
   final _link = LayerLink();
   final _portal = OverlayPortalController();
 
-  late final List<_Funcao> _funcoes = [
-    _Funcao('Cadastrar suíno', Icons.add_circle_outline,
-        (c) => Navigator.pushNamed(c, Rotas.cadastroAnimal)),
-    _Funcao('Editar suíno', Icons.edit_note,
-        (c) => Navigator.pushNamed(c, Rotas.editarAnimal)),
-    _Funcao('Cadastrar ninhada', Icons.pets,
-        (c) => Navigator.pushNamed(c, Rotas.cadastroNinhada)),
-    _Funcao('Registrar vacinação', Icons.vaccines_outlined,
-        (c) => Navigator.pushNamed(c, Rotas.registroVacina)),
-    _Funcao('Estoque de ração', Icons.inventory_2,
-        (c) => Navigator.pushNamed(c, Rotas.estoqueRacao)),
-    _Funcao('Cadastrar ração', Icons.add_box_outlined,
-        (c) => Navigator.pushNamed(c, Rotas.cadastroRacao)),
-    _Funcao('Cadastrar usuário', Icons.person_add_alt,
-        (c) => Navigator.pushNamed(c, Rotas.cadastroUsuario)),
-    _Funcao('Gerar relatório PDF', Icons.picture_as_pdf_outlined,
-        (_) => widget.onGerarRelatorio()),
+  // Últimos dados recebidos das streams, para filtrar a busca em memória.
+  final _subs = <StreamSubscription<dynamic>>[];
+  List<RacaoModel> _dadosRacoes = const [];
+  List<AnimalModel> _dadosAnimais = const [];
+  List<NinhadaModel> _dadosNinhadas = const [];
+  List<EventoModel> _dadosEventos = const [];
+
+  // Funções/telas fixas que a busca conhece.
+  late final List<_Resultado> _funcoes = [
+    _Resultado(
+        titulo: 'Cadastrar suíno',
+        icone: Icons.add_circle_outline,
+        abrir: (c) => Navigator.pushNamed(c, Rotas.cadastroAnimal)),
+    _Resultado(
+        titulo: 'Editar suíno',
+        icone: Icons.edit_note,
+        abrir: (c) => Navigator.pushNamed(c, Rotas.editarAnimal)),
+    _Resultado(
+        titulo: 'Cadastrar ninhada',
+        icone: Icons.pets,
+        abrir: (c) => Navigator.pushNamed(c, Rotas.cadastroNinhada)),
+    _Resultado(
+        titulo: 'Registrar vacinação',
+        icone: Icons.vaccines_outlined,
+        abrir: (c) => Navigator.pushNamed(c, Rotas.registroVacina)),
+    _Resultado(
+        titulo: 'Estoque de ração',
+        icone: Icons.inventory_2,
+        abrir: (c) => Navigator.pushNamed(c, Rotas.estoqueRacao)),
+    _Resultado(
+        titulo: 'Cadastrar ração',
+        icone: Icons.add_box_outlined,
+        abrir: (c) => Navigator.pushNamed(c, Rotas.cadastroRacao)),
+    _Resultado(
+        titulo: 'Cadastrar usuário',
+        icone: Icons.person_add_alt,
+        abrir: (c) => Navigator.pushNamed(c, Rotas.cadastroUsuario)),
+    _Resultado(
+        titulo: 'Gerar relatório PDF',
+        icone: Icons.picture_as_pdf_outlined,
+        abrir: (_) => widget.onGerarRelatorio()),
   ];
 
   @override
@@ -690,13 +760,28 @@ class _BuscaFuncoesState extends State<_BuscaFuncoes> {
     super.initState();
     _controller.addListener(_atualizar);
     _focus.addListener(_atualizar);
+    _subs.add(widget.racoes.listen((v) => _receber(() => _dadosRacoes = v)));
+    _subs.add(widget.animais.listen((v) => _receber(() => _dadosAnimais = v)));
+    _subs
+        .add(widget.ninhadas.listen((v) => _receber(() => _dadosNinhadas = v)));
+    _subs.add(widget.eventos.listen((v) => _receber(() => _dadosEventos = v)));
   }
 
   @override
   void dispose() {
+    for (final s in _subs) {
+      s.cancel();
+    }
     _controller.dispose();
     _focus.dispose();
     super.dispose();
+  }
+
+  /// Guarda os novos dados e reavalia o painel (sem abri-lo se o campo estiver
+  /// sem foco).
+  void _receber(VoidCallback aplicar) {
+    aplicar();
+    if (mounted) _atualizar();
   }
 
   /// Minúsculas + sem acentos, para a busca ignorar acentuação.
@@ -710,14 +795,102 @@ class _BuscaFuncoesState extends State<_BuscaFuncoes> {
     return s;
   }
 
-  List<_Funcao> get _resultados {
+  String _sexoLabel(AnimalModel a) => a.isMacho ? 'Macho' : 'Fêmea';
+
+  String _statusLabel(AnimalModel a) {
+    switch (a.status) {
+      case 'gestante':
+        return 'Gestante';
+      case 'vendido':
+        return 'Vendido';
+      case 'doente':
+        return 'Em tratamento';
+      case 'morto':
+        return 'Perda';
+      default:
+        return 'Ativo';
+    }
+  }
+
+  /// Resultados agrupados por categoria; vazio quando o campo está em branco.
+  List<_Secao> get _secoes {
     final q = _normaliza(_controller.text.trim());
     if (q.isEmpty) return const [];
-    return _funcoes.where((f) => _normaliza(f.nome).contains(q)).toList();
+
+    final secoes = <_Secao>[];
+
+    // Funções/telas.
+    final funcoes =
+        _funcoes.where((f) => _normaliza(f.titulo).contains(q)).toList();
+    if (funcoes.isNotEmpty) secoes.add(_Secao('Funções', funcoes));
+
+    // Animais por código ou raça.
+    final animais = _dadosAnimais
+        .where((a) =>
+            _normaliza(a.codigo).contains(q) || _normaliza(a.raca).contains(q))
+        .take(8)
+        .map((a) => _Resultado(
+              titulo: a.codigo,
+              subtitulo: a.raca.trim().isEmpty
+                  ? '${_sexoLabel(a)} • ${_statusLabel(a)}'
+                  : '${_sexoLabel(a)} • ${a.raca.trim()} • ${_statusLabel(a)}',
+              icone: Icons.pets,
+              abrir: (c) => Navigator.pushNamed(c, Rotas.editarAnimal),
+            ))
+        .toList();
+    if (animais.isNotEmpty) secoes.add(_Secao('Animais', animais));
+
+    // Eventos/vacinas por descrição ou data.
+    final eventos = _dadosEventos
+        .where((e) => _normaliza(
+                '${descricaoEvento(e)} ${fmtDiaMes(e.data)} ${e.data.year}')
+            .contains(q))
+        .take(8)
+        .map((e) => _Resultado(
+              titulo: descricaoEvento(e),
+              subtitulo: '${fmtDiaMes(e.data)}/${e.data.year}',
+              icone: Icons.vaccines_outlined,
+              abrir: (c) => Navigator.pushNamed(c, Rotas.registroVacina),
+            ))
+        .toList();
+    if (eventos.isNotEmpty) secoes.add(_Secao('Eventos', eventos));
+
+    // Anotações (observações reunidas de todos os formulários).
+    final anotacoes = coletarAnotacoes(
+            _dadosRacoes, _dadosAnimais, _dadosNinhadas, _dadosEventos)
+        .where((a) => _normaliza('${a.origem} ${a.texto}').contains(q))
+        .take(8)
+        .map((a) => _Resultado(
+              titulo: a.texto,
+              subtitulo: a.origem,
+              icone: Icons.sticky_note_2_outlined,
+              abrir: (c) => _mostrarAnotacao(c, a),
+            ))
+        .toList();
+    if (anotacoes.isNotEmpty) secoes.add(_Secao('Anotações', anotacoes));
+
+    return secoes;
+  }
+
+  /// Anotação não tem tela própria: mostramos o texto completo num diálogo.
+  void _mostrarAnotacao(BuildContext context, Anotacao a) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(a.origem),
+        content: Text(a.texto),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Fechar'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _atualizar() {
-    final mostrar = _focus.hasFocus && _resultados.isNotEmpty;
+    final mostrar = _focus.hasFocus && _secoes.isNotEmpty;
     if (mostrar) {
       _portal.show();
     } else {
@@ -726,11 +899,11 @@ class _BuscaFuncoesState extends State<_BuscaFuncoes> {
     if (mounted) setState(() {});
   }
 
-  void _selecionar(_Funcao f) {
+  void _selecionar(_Resultado r) {
     _controller.clear();
     _focus.unfocus();
     _portal.hide();
-    f.abrir(context);
+    r.abrir(context);
   }
 
   @override
@@ -755,7 +928,7 @@ class _BuscaFuncoesState extends State<_BuscaFuncoes> {
           controller: _controller,
           focusNode: _focus,
           decoration: const InputDecoration(
-            hintText: 'pesquisar funções',
+            hintText: 'pesquisar',
             prefixIcon: Icon(Icons.search),
             isDense: true,
           ),
@@ -767,33 +940,55 @@ class _BuscaFuncoesState extends State<_BuscaFuncoes> {
   Widget _painelResultados() {
     // Acompanha a largura do campo (mesma da coluna da home).
     final largura = MediaQuery.of(context).size.width - 32;
-    final resultados = _resultados;
+    final secoes = _secoes;
     return Material(
       elevation: 4,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         width: largura,
-        constraints: const BoxConstraints(maxHeight: 280),
+        constraints: const BoxConstraints(maxHeight: 320),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.black12),
         ),
-        child: ListView.separated(
+        child: ListView(
           shrinkWrap: true,
           padding: const EdgeInsets.symmetric(vertical: 4),
-          itemCount: resultados.length,
-          separatorBuilder: (_, _) =>
-              const Divider(height: 1, indent: 52, color: Colors.black12),
-          itemBuilder: (context, i) {
-            final f = resultados[i];
-            return ListTile(
-              dense: true,
-              leading: Icon(f.icone, color: _verde),
-              title: Text(f.nome),
-              onTap: () => _selecionar(f),
-            );
-          },
+          children: [
+            for (final s in secoes) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+                child: Text(
+                  s.titulo.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black54,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              for (final r in s.itens)
+                ListTile(
+                  dense: true,
+                  leading: Icon(r.icone, color: _verde),
+                  title: Text(
+                    r.titulo,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: r.subtitulo == null
+                      ? null
+                      : Text(
+                          r.subtitulo!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                  onTap: () => _selecionar(r),
+                ),
+            ],
+          ],
         ),
       ),
     );

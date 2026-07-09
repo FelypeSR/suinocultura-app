@@ -21,6 +21,8 @@ class _RegistroVacinaScreenState extends State<RegistroVacinaScreen> {
   final _formKey = GlobalKey<FormState>();
   final _service = EventoService();
   final _animalService = AnimalService();
+  // Stream criada uma vez: rebuilds não reabrem a consulta no Firestore.
+  late final _animais = _animalService.listar();
 
   DateTime? _data;
   String? _via;
@@ -138,7 +140,7 @@ class _RegistroVacinaScreenState extends State<RegistroVacinaScreen> {
                     ),
                     Expanded(
                       child: StreamBuilder<List<AnimalModel>>(
-                        stream: _animalService.listar(),
+                        stream: _animais,
                         builder: (context, snapshot) {
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {

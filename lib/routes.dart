@@ -8,6 +8,7 @@ import 'screens/CadastroNinhadaScreen.dart';
 import 'screens/CadastroUsuarioScreen.dart';
 import 'screens/RegistroVacinaScreen.dart';
 import 'screens/EstoqueRacaoScreen.dart';
+import 'screens/EditarPerfilScreen.dart';
 
 /// Rotas nomeadas do app, centralizadas em um único lugar.
 ///
@@ -27,6 +28,7 @@ class Rotas {
   static const String registroVacina = '/registro-vacina';
   static const String estoqueRacao = '/estoque-racao';
   static const String cadastroRacao = '/cadastro-racao';
+  static const String editarPerfil = '/editar-perfil';
 
   // Mapa nome -> construtor da tela.
   // A raiz ('/') é tratada pelo AuthGate (home do MaterialApp), por isso
@@ -42,5 +44,6 @@ class Rotas {
     registroVacina: (_) => const RegistroVacinaScreen(),
     estoqueRacao: (_) => EstoqueRacaoScreen(),
     cadastroRacao: (_) => const CadastroRacaoScreen(),
+    editarPerfil: (_) => const EditarPerfilScreen(),
   };
 }
