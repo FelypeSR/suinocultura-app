@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gspr/screen_base.dart';
 import 'package:gspr/assets/widgets/hide_bar.dart';
+import 'package:gspr/routes.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -26,9 +27,11 @@ class HomeScreen extends StatelessWidget {
         await FirebaseAuth.instance.signOut();
       },
 
-      onEditarPerfil: () {},
+      onEditarPerfil: () =>
+          Navigator.pushNamed(context, Rotas.editarPerfil),
       onAtividades: () {},
-      onConfiguracoes: () {},
+      onConfiguracoes: () =>
+          Navigator.pushNamed(context, Rotas.configuracoes),
       onGerenciarDados: () {},
       onExportarDados: () {},
 

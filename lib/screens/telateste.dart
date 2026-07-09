@@ -303,7 +303,8 @@ class _WidgetTestScreenState extends State<WidgetTestScreen> {
       onEditarPerfil: () =>
           Navigator.pushNamed(context, Rotas.editarPerfil),
       onAtividades: () {},
-      onConfiguracoes: () {},
+      onConfiguracoes: () =>
+          Navigator.pushNamed(context, Rotas.configuracoes),
       onGerenciarDados: _abrirMenuCadastros,
       onExportarDados: _gerarRelatorioPdf,
       child: Scaffold(
@@ -395,6 +396,11 @@ class _WidgetTestScreenState extends State<WidgetTestScreen> {
           // Ícone de gráfico (3) abre o estoque de ração
           if (index == 3) {
             Navigator.pushNamed(context, Rotas.estoqueRacao);
+            return;
+          }
+          // Engrenagem (4) abre a tela de configurações
+          if (index == 4) {
+            Navigator.pushNamed(context, Rotas.configuracoes);
             return;
           }
           setState(() {

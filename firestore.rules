@@ -2,9 +2,11 @@ rules_version = '2';
 
 // Regras de segurança do Firestore — projeto "suinobd" (GSPR).
 //
-// As coleções da granja são compartilhadas entre os dispositivos do produtor e
-// só podem ser lidas/escritas por um usuário autenticado (login por e-mail/senha
-// ou conta Google). Tudo o que não estiver explicitamente liberado é bloqueado.
+// Os dados da granja são compartilhados entre os dispositivos do produtor,
+// mas o acesso é restrito a uma lista de e-mails autorizados (coleção
+// /autorizados, um documento por e-mail em minúsculas). Criar uma conta no
+// app NÃO dá acesso aos dados: o e-mail precisa estar na lista.
+// Tudo o que não estiver explicitamente liberado é bloqueado.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -13,36 +15,59 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // E-mail do usuário logado, normalizado para minúsculas — é o ID dos
+    // documentos da coleção /autorizados.
+    function emailLogado() {
+      return request.auth.token.email.lower();
+    }
+
+    // Usuário logado cujo e-mail está na lista de autorizados da granja.
+    function isAutorizado() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/autorizados/$(emailLogado()));
+    }
+
+    // Lista de e-mails com acesso aos dados da granja.
+    match /autorizados/{email} {
+      // Cada usuário pode consultar o próprio registro: é assim que o app
+      // decide entre mostrar a home ou a tela de "acesso não autorizado".
+      allow get: if isSignedIn() && emailLogado() == email;
+      // Quem já é autorizado pode ver e gerenciar a lista (adicionar ou
+      // remover e-mails). O primeiro registro é criado pelo console.
+      allow read, write: if isAutorizado();
+    }
+
     // Rebanho (cadastro de animais)
     match /animais/{animalId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if isAutorizado();
 
       // Histórico de coberturas do reprodutor (subcoleção). O match do
       // documento acima NÃO alcança subcoleções, então precisa ser explícito.
       match /coberturas/{coberturaId} {
-        allow read, write: if isSignedIn();
+        allow read, write: if isAutorizado();
       }
     }
 
     // Estoque de ração
     match /racoes/{racaoId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if isAutorizado();
     }
 
     // Eventos / vacinação
     match /eventos/{eventoId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if isAutorizado();
     }
 
     // Ninhadas / leitegadas
     match /ninhadas/{ninhadaId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if isAutorizado();
     }
 
-    // Perfil do usuário (foto etc.): cada um só escreve no próprio documento.
+    // Perfil do usuário (foto etc.): leitura para autorizados; escrita só no
+    // próprio documento.
     match /usuarios/{uid} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && request.auth.uid == uid;
+      allow read: if isAutorizado();
+      allow write: if isAutorizado() && request.auth.uid == uid;
     }
 
     // Negação padrão: qualquer outra coleção/documento fica bloqueado.
