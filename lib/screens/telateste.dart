@@ -252,6 +252,15 @@ class _WidgetTestScreenState extends State<WidgetTestScreen> {
             ),
             ListTile(
               leading:
+                  const Icon(Icons.child_friendly, color: Color(0xFF2E7D32)),
+              title: const Text('Editar ninhada'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                Navigator.pushNamed(context, Rotas.editarNinhada);
+              },
+            ),
+            ListTile(
+              leading:
                   const Icon(Icons.inventory_2, color: Color(0xFF2E7D32)),
               title: const Text('Adicionar ração'),
               onTap: () {
@@ -767,6 +776,10 @@ class _BuscaGlobalState extends State<_BuscaGlobal> {
         titulo: 'Cadastrar ninhada',
         icone: Icons.pets,
         abrir: (c) => Navigator.pushNamed(c, Rotas.cadastroNinhada)),
+    _Resultado(
+        titulo: 'Editar ninhada',
+        icone: Icons.child_friendly,
+        abrir: (c) => Navigator.pushNamed(c, Rotas.editarNinhada)),
     _Resultado(
         titulo: 'Registrar vacinação',
         icone: Icons.vaccines_outlined,

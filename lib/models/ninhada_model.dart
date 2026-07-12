@@ -6,8 +6,12 @@ class NinhadaModel {
   final String? id;
   final String? maeId; // id do animal-mãe em 'animais' (se cadastrada)
   final String maeCodigo; // código da mãe, para exibição
+  final String? paiId; // id do animal-pai em 'animais' (se cadastrado)
+  final String paiCodigo; // código do pai, para exibição
   final DateTime data; // data do parto
   final int nascidos; // total de leitões nascidos
+  final int machos; // leitões machos (0 quando não informado)
+  final int femeas; // leitões fêmeas (0 quando não informado)
   final int mortos; // mortos até o desmame
   final int desmamados; // desmamados com sucesso
   final String observacao;
@@ -17,8 +21,12 @@ class NinhadaModel {
     this.id,
     this.maeId,
     required this.maeCodigo,
+    this.paiId,
+    this.paiCodigo = '',
     required this.data,
     required this.nascidos,
+    this.machos = 0,
+    this.femeas = 0,
     this.mortos = 0,
     this.desmamados = 0,
     this.observacao = '',
@@ -41,8 +49,12 @@ class NinhadaModel {
     return {
       'maeId': maeId,
       'maeCodigo': maeCodigo,
+      'paiId': paiId,
+      'paiCodigo': paiCodigo,
       'data': Timestamp.fromDate(data),
       'nascidos': nascidos,
+      'machos': machos,
+      'femeas': femeas,
       'mortos': mortos,
       'desmamados': desmamados,
       'observacao': observacao,
@@ -55,8 +67,12 @@ class NinhadaModel {
       id: id,
       maeId: map['maeId'],
       maeCodigo: map['maeCodigo'] ?? '',
+      paiId: map['paiId'],
+      paiCodigo: map['paiCodigo'] ?? '',
       data: (map['data'] as Timestamp).toDate(),
       nascidos: (map['nascidos'] as num?)?.toInt() ?? 0,
+      machos: (map['machos'] as num?)?.toInt() ?? 0,
+      femeas: (map['femeas'] as num?)?.toInt() ?? 0,
       mortos: (map['mortos'] as num?)?.toInt() ?? 0,
       desmamados: (map['desmamados'] as num?)?.toInt() ?? 0,
       observacao: map['observacao'] ?? '',
