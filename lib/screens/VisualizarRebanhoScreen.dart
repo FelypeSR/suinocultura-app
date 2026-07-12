@@ -68,7 +68,7 @@ class VisualizarRebanhoScreen extends StatelessWidget {
   }
 }
 
-/// Faixa verde com a contagem do rebanho: total (sem perdas), machos e fêmeas.
+/// Faixa verde com a contagem do rebanho: total, machos e fêmeas.
 class _ResumoRebanho extends StatelessWidget {
   final List<AnimalModel> animais;
 
@@ -76,8 +76,9 @@ class _ResumoRebanho extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Perdas ficam fora da contagem (mesma regra do resumo da home).
-    final vivos = animais.where((a) => !a.morto).toList();
+    // Perdas e vendidos ficam fora da contagem (mas seguem registrados na
+    // lista abaixo, como histórico).
+    final vivos = animais.where((a) => !a.morto && !a.vendido).toList();
     final machos = vivos.where((a) => a.isMacho).length;
     final femeas = vivos.where((a) => a.isFemea).length;
 

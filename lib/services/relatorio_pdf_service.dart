@@ -169,8 +169,9 @@ class RelatorioPdfService {
   // Seção: Rebanho
   // -------------------------------------------------------------------------
   pw.Widget _secaoRebanho(List<AnimalModel> todos) {
-    // Mortos ficam fora das estatísticas do rebanho.
-    final animais = todos.where((a) => !a.morto).toList();
+    // Mortos e vendidos ficam fora das estatísticas do rebanho (as vendas
+    // têm seção própria no relatório).
+    final animais = todos.where((a) => !a.morto && !a.vendido).toList();
     final total = animais.length;
     final machos = animais.where((a) => a.sexo == 'macho').length;
     final femeas = animais.where((a) => a.sexo == 'femea').length;

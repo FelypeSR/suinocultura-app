@@ -143,8 +143,9 @@ class _WidgetTestScreenState extends State<WidgetTestScreen> {
 
     return ResumodeEventos(
       estoqueKg: estoqueKg,
-      // Mortos ficam fora do rebanho (vendidos seguem contando, como antes).
-      rebanho: animais.where((a) => !a.morto).length,
+      // Mortos e vendidos ficam fora do rebanho (vendidos seguem
+      // registrados como histórico nas telas e no relatório).
+      rebanho: animais.where((a) => !a.morto && !a.vendido).length,
       leitoes: leitoes,
       dataRegistro: dataRegistro,
       percentualRacao: percentual,
