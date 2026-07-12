@@ -193,7 +193,8 @@ class _WidgetTestScreenState extends State<WidgetTestScreen> {
     );
   }
 
-  /// Ações rápidas do botão central da navbar: cadastrar suíno ou ração.
+  /// Ações rápidas do botão central da navbar: visualizar o rebanho e as
+  /// vacinas, cadastrar suíno ou ração.
   void _abrirAcoesRapidas() {
     showModalBottomSheet<void>(
       context: context,
@@ -213,6 +214,24 @@ class _WidgetTestScreenState extends State<WidgetTestScreen> {
                     style: TextStyle(
                         fontSize: 16, fontWeight: FontWeight.bold)),
               ),
+            ),
+            ListTile(
+              leading:
+                  const Icon(Icons.visibility_outlined, color: Color(0xFF2E7D32)),
+              title: const Text('Visualizar rebanho'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                Navigator.pushNamed(context, Rotas.visualizarRebanho);
+              },
+            ),
+            ListTile(
+              leading:
+                  const Icon(Icons.vaccines_outlined, color: Color(0xFF2E7D32)),
+              title: const Text('Visualizar vacinas'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                Navigator.pushNamed(context, Rotas.visualizarVacinas);
+              },
             ),
             ListTile(
               leading: const Icon(Icons.pets, color: Color(0xFF2E7D32)),
@@ -727,6 +746,14 @@ class _BuscaGlobalState extends State<_BuscaGlobal> {
 
   // Funções/telas fixas que a busca conhece.
   late final List<_Resultado> _funcoes = [
+    _Resultado(
+        titulo: 'Visualizar rebanho',
+        icone: Icons.visibility_outlined,
+        abrir: (c) => Navigator.pushNamed(c, Rotas.visualizarRebanho)),
+    _Resultado(
+        titulo: 'Visualizar vacinas',
+        icone: Icons.vaccines_outlined,
+        abrir: (c) => Navigator.pushNamed(c, Rotas.visualizarVacinas)),
     _Resultado(
         titulo: 'Cadastrar suíno',
         icone: Icons.add_circle_outline,
